@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "hobby",
+    "name": "Hobby",
     "slug": "hobby",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "icon": "./assets/images/logo.png",
+    "scheme": "hobby",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash.png",
