@@ -1,18 +1,20 @@
-import { View, Text, Image, Pressable } from 'react-native'
-import { styled } from 'nativewind'
+import { View, Text, Pressable, Image } from 'react-native'
 import React, { useEffect, useState } from 'react'
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { styled } from 'nativewind'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 
-import collectionExample from '../../assets/images/collectionExample.png'
+import sellerExample from '../../../assets/images/sellerExample.png'
 
+const router = useRouter();
 const StyledPressable = styled(Pressable)
-const StyledImage = styled(Image)
 const StyledView = styled(View)
 const StyledText = styled(Text)
+const StyledSafeAreaView = styled(SafeAreaView)
+const StyledImage = styled(Image)
 
-const collection = () => {
-  const router = useRouter();
+const sell = () => {
   const auth = getAuth();
 
   const [loading,setLoading]=useState(true)
@@ -33,13 +35,13 @@ const collection = () => {
       <StyledView className='flex-1 w-full h-full'>
         <StyledView className='flex mt-16 h-96'>
           <StyledImage
-            source={collectionExample}
+            source={sellerExample}
             className='h-full w-full border'
           />
         </StyledView>
         <StyledView className='w-full h-48 mt-4'>
-          <StyledText className='text-4xl font-bold pl-4 pr-4 mt-2'>Track Your Collection</StyledText>
-          <StyledText className='pl-4 pr-4'>Track how your collection stacks up against the rest of our users. We automatically add cards you buy or sell on Hobby to your collection.</StyledText>
+          <StyledText className='text-4xl font-bold pl-4 pr-4 mt-2'>No Seller Fees</StyledText>
+          <StyledText className='pl-4 pr-4'>We have 0% seller fees, no strings attached. Expand profit margins and sell cards faster by using Hobby.</StyledText>
         </StyledView>
         <StyledView className='flex absolute w-full h-32 bottom-12'>
           <StyledImage />
@@ -54,11 +56,14 @@ const collection = () => {
       </StyledView>
     )
   }
+
   return (
-    <StyledView>
-      <StyledText>collection</StyledText>
-    </StyledView>
+    <StyledSafeAreaView className='mt-16'>
+      <StyledPressable onPress={() => {router.push('/(tabs)/sell/createListing')}}>
+        <Text>Create Listing</Text>
+      </StyledPressable>
+    </StyledSafeAreaView>
   )
 }
 
-export default collection
+export default sell

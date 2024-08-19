@@ -6,7 +6,8 @@ module.exports = {
       colors:{
         primary: "#FF5757",
         white: "#F6F6F6",
-        black: "#000000"
+        black: "#000000",
+        gray: "#8C8C8C"
       },
       fontFamily: {
         pblack: ["Poppins-Black", "sans-serif"]

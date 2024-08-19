@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, Pressable, ImageBackground, FlatList, Dimensions, Alert, Animated, Platform, Modal } from 'react-native';
+import { View, Text, Image, Pressable, ImageBackground, FlatList, Dimensions, Alert, Animated, Platform, Modal, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { styled } from 'nativewind';
@@ -8,6 +8,13 @@ import { ref, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/firebaseConfig'; // Import your storage instance
 import { LinearGradient } from 'expo-linear-gradient';
 import icons from '../../../../constants/icons';
+
+const StyledPressable = styled(Pressable)
+const StyledImage = styled(Image)
+const StyledView = styled(View)
+const StyledText = styled(Text)
+const StyledImageBackground = styled(ImageBackground)
+const StyledScrollView = styled(ScrollView)
 
 type Listing = {
   id: number;
@@ -21,12 +28,6 @@ type Listing = {
 };
 
 const Index = () => {
-  const StyledPressable = styled(Pressable)
-  const StyledImage = styled(Image)
-  const StyledView = styled(View)
-  const StyledText = styled(Text)
-  const StyledImageBackground = styled(ImageBackground)
-
   const { height: screenHeight } = Dimensions.get('window');
   
   const isIOS = Platform.OS === 'ios';
@@ -245,8 +246,8 @@ const Index = () => {
                         width: animatedWidth, // Animate the width
                       }}
                     />
-                    <StyledText className='text-white text-2xl text-center font-bold'>${item.price}</StyledText>
-                    <StyledText className='pl-8 text-white text-2xl text-center'>Buy Now</StyledText>
+                    <StyledText className='text-white text-2xl text-center font-bold shadow-sm shadow-gray'>${item.price}</StyledText>
+                    <StyledText className='pl-8 text-white text-2xl text-center shadow-sm shadow-gray'>Buy Now</StyledText>
                   </StyledPressable>
                   <StyledPressable className='flex-1 mt-2 bg-black rounded-2xl border-2 border-white justify-center basis-1/3' onPress={handleOffer}>
                     <StyledText className='text-white text-2xl text-center'>Offer</StyledText>
@@ -269,18 +270,69 @@ const Index = () => {
               Alert.alert('Modal has been closed.');
               setModalVisible(!modalVisible);
             }}>
-            <StyledView className='flex-1 flex-row justify-center mt-16'>
-              <StyledView className='flex-1 bg-white rounded-xl h-full'>
-                <StyledImage source={icons.carrot} className='absolute w-5 h-5 left-1/2 mt-2'></StyledImage>
-                <StyledImage source={{uri:item.urls[0]}} className='h-96'/>
-                <StyledText className='text-3xl font-bold pl-4 mt-2'>{item.title}</StyledText>
-                <StyledText className='pl-4 mt-2'>{item.description}</StyledText>
-                <StyledPressable
-                  onPress={() => setModalVisible(!modalVisible)}>
-                  <Text>Hide Modal</Text>
-                </StyledPressable>
+            <StyledView className='flex-1 h-full w-full bg-white mt-16 rounded-xl'>
+              <StyledScrollView>
+                <StyledView className='flex-1 flex-row justify-center'>
+                  <StyledView className='flex-1 bg-white rounded-xl h-full'>
+                    <StyledImageBackground source={{uri:item.urls[0]}} className='h-96'>
+                      <StyledPressable onPress={() => setModalVisible(!modalVisible)} className='flex w-full h-5 items-center'>
+                        <StyledImage source={icons.carrot} className='w-5 h-5 mt-2' style={{ transform: [{ rotate: '180deg' }] }}></StyledImage>
+                      </StyledPressable>
+                      <StyledPressable onPress={() => {setModalVisible(!modalVisible); handleLike(item.id, item.likes)}} className='flex-row absolute bg-black right-4 bottom-2 rounded-full'>
+                        <StyledText className='text-white pl-2 text-xl font-bold self-center'>{item.likes}</StyledText>
+                        <StyledImage source={icons.heartEmpty} className='w-6 h-6 m-2'/>
+                      </StyledPressable>
+                    </StyledImageBackground>
+                    <StyledView className='w-full pl-4 pr-4'>
+                      <StyledText className='text-3xl font-bold mt-2'>{item.title}</StyledText>
+                      <StyledText className='text-gray'>{item.description}</StyledText>
+                      <StyledView className='flex flex-row mt-4'>
+                        <StyledText className='text-xl'>${item.price}</StyledText>
+                        <StyledText className='text-gray pl-2 self-center'>+ $x shipping+taxes</StyledText>
+                      </StyledView>
+                    </StyledView>
+                    <StyledView className='bg-gray mt-2 w-full h-px'/>
+                    <StyledView className='w-full pl-4 pr-4 mt-2'>
+                      <StyledText className='font-bold text-2xl'>Details</StyledText>
+                    </StyledView>
+                    <StyledView className='bg-gray mt-2 w-full h-px'/>
+                    <StyledView className='w-full pl-4 pr-4 mt-2'>
+                      <StyledText className='font-bold text-2xl'>Seller</StyledText>
+                    </StyledView>
+                  </StyledView>
+                </StyledView>
+              </StyledScrollView>
+
+              <StyledView className='bg-white absolute bottom-0 w-full shadow-md shadow-black'>
+                <StyledView className='bg-white flex-1 flex-row mb-2 justify-center ml-4 mr-4 mb-8'>
+                    <StyledView className='flex-1 flex-row basis-2/3 mt-2 bg-black rounded-2xl justify-center items-center shadow-sm shadow-gray'>
+                      <StyledPressable 
+                        className='flex-1 flex-row basis-2/3 bg-primary rounded-2xl overflow-hidden justify-center items-center' 
+                        onPressIn={handlePressIn}
+                        onPressOut={handlePressOut}
+                      >
+                        <Animated.View
+                          style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            backgroundColor: '#00FF00', // Green color
+                            width: animatedWidth, // Animate the width
+                          }}
+                        />
+                        <StyledText className='text-white text-2xl text-center font-bold shadow-sm shadow-gray'>${item.price}</StyledText>
+                        <StyledText className='pl-8 text-white text-2xl text-center border-2 shadow-sm shadow-gray'>Buy Now</StyledText>
+                      </StyledPressable>
+                    </StyledView>
+                    <StyledView className='flex-1 mt-2 bg-black rounded-2xl justify-center basis-1/3 shadow-sm shadow-black'>
+                      <StyledPressable className='flex-1 bg-black rounded-2xl justify-center basis-1/3' onPress={handleOffer}>
+                        <StyledText className='text-white text-2xl text-center'>Offer</StyledText>
+                      </StyledPressable>
+                    </StyledView>
+                  </StyledView>
+                </StyledView>
               </StyledView>
-            </StyledView>
           </Modal>
         </StyledImageBackground>
       </Pressable>

@@ -8,6 +8,9 @@ import heartEmpty from "..//assets/icons/heartEmpty.png"
 import heartFull from "..//assets/icons/heartFull.png"
 import circle from "..//assets/icons/circle.png"
 import carrot from "..//assets/icons/carrot.png"
+import carrotBlack from "../assets/icons/carrotBlack.png"
+import trash from "..//assets/icons/trash.png"
+import x from '..//assets/icons/x.png'
 
 
 export default {
@@ -20,5 +23,8 @@ export default {
   heartEmpty,
   heartFull,
   circle,
-  carrot
+  carrot,
+  carrotBlack,
+  trash,
+  x
 };

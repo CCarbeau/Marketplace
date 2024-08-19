@@ -6,19 +6,19 @@ import { auth } from '../../firebaseConfig';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const StyledPressable = styled(Pressable);
+const StyledImage = styled(Image);
+const StyledView = styled(View);
+const StyledSafeAreaView = styled(SafeAreaView);
+const StyledTextInput = styled(TextInput);
+const StyledText = styled(Text);
+
 type ErrorType = Error | null;
 
 const SignIn = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<ErrorType>(null);
-
-  const StyledPressable = styled(Pressable);
-  const StyledImage = styled(Image);
-  const StyledView = styled(View);
-  const StyledSafeAreaView = styled(SafeAreaView);
-  const StyledTextInput = styled(TextInput);
-  const StyledText = styled(Text);
 
   const router = useRouter();
 

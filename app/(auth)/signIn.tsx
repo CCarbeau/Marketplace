@@ -6,13 +6,13 @@ import { onAuthStateChanged, User, signInWithEmailAndPassword } from 'firebase/a
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-const signIn = () => {
-  const StyledPressable = styled(Pressable)
-  const StyledView = styled(View)
-  const StyledText = styled(Text)
-  const StyledSafeAreaView = styled(SafeAreaView)
-  const StyledTextInput = styled(TextInput)
+const StyledPressable = styled(Pressable)
+const StyledView = styled(View)
+const StyledText = styled(Text)
+const StyledSafeAreaView = styled(SafeAreaView)
+const StyledTextInput = styled(TextInput)
 
+const signIn = () => {
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
