@@ -7,7 +7,6 @@ import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 
 import sellerExample from '../../../assets/images/sellerExample.png'
 
-const router = useRouter();
 const StyledPressable = styled(Pressable)
 const StyledView = styled(View)
 const StyledText = styled(Text)
@@ -16,6 +15,7 @@ const StyledImage = styled(Image)
 
 const sell = () => {
   const auth = getAuth();
+  const router = useRouter();
 
   const [loading,setLoading]=useState(true)
 

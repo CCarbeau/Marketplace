@@ -1,12 +1,17 @@
 import React, { useState, useRef } from 'react';
-import { View, Pressable, Image, Alert, Animated, TextInput, Text, ScrollView, ImageBackground, Dimensions, Modal } from 'react-native';
+import { View, Pressable, Image, Alert, Animated, TextInput, Text, ScrollView, ImageBackground, Dimensions, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage, auth } from '../../../../firebaseConfig';
 import { doc, setDoc } from "firebase/firestore"; 
 import { styled } from 'nativewind';
+
+import DateTimePicker from '@react-native-community/datetimepicker';
 import icons from '../../../../constants/icons'
 import CategoryModal from './category'
+import BrandModal from './brand';
+import FeaturesModal from './features';
+import ShippingModal from './shipping';
 
 const StyledPressable = styled(Pressable)
 const StyledImage = styled(Image)
@@ -18,41 +23,69 @@ const StyledTextInput = styled(TextInput)
 
 const { width: screenWidth } = Dimensions.get('window');
 
-type Listing = {
-  id: number;
-  urls: string[];
-  title: string;
-  description: string;
-  price: number;
-  likes: number;
-  offerable: boolean;
-  ownerUID: string;
-};
-
 const CreateListing = () => {
   const [uploading, setUploading] = useState(false);
+  const [imageIndex, setImageIndex]= useState(0);
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
+  const [brandModalVisible, setBrandModalVisible] = useState(false);
+  const [featuresModalVisible, setFeaturesModalVisible] = useState(false);
+  const [shippingModalVisible, setShippingModalVisible] = useState(false);
+  const [minimized, setMinimized] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  
+  const [category, setCategory] = useState('');
+  const [genre, setGenre] = useState('')
   const [title, setTitle] = useState('');
   const [description, setDes] = useState('');
   const [price, setPrice] = useState('');
+  const [quantity,setQuantity] = useState('');
+  const [offerable, setOfferable] = useState(false);
   const [images, setImages] = useState<string[]>([]);
-  const [imageIndex, setImageIndex]= useState(0);
-  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
-  const [minimized, setMinimized] = useState(false);
-  const [currentPage, setCurrentPage] = useState(''); 
-  const [directory, setDirectory] = useState(''); 
-  const slideAnim = useRef(new Animated.Value(0)).current; // Initial value for the animation
+  const [athlete, setAthlete] = useState('');
+  const [team, setTeam] = useState('');
+  const [year, setYear] = useState('');
+  const [brand, setBrand] = useState('');
+  const [set, setSet] = useState('');
+  const [features, setFeatures] = useState<string[]>([]);
+  const [parallel, setParallel] = useState('');
+  const [printRun, setPrintRun] = useState('');
+  const [listingType, setListingType] = useState('');
+  const [shippingType, setShippingType] = useState('');
+  const [scheduled, setScheduled] = useState(false);
+  const [date, setDate] = useState(new Date());
+  const [time, setTime] = useState(new Date());
+  const [duration, setDuration] = useState('7');
+  const [shippingCost, setShippingCost] = useState('');
+  const [weight, setWeight ] = useState('');
+  const [shippingProfile, setShippingProfile] = useState('');
+  const [cardsInLot, setCardsInLot] = useState('');
+  
+  const [progress] = useState(new Animated.Value(0));
 
-  const [category, setCategory] = useState('');
-
-  const slideToPage = (page) => {
-    const toValue = page === 'category' ? 0 : -screenWidth;
-
-    Animated.timing(slideAnim, {
-      toValue: toValue,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => setCurrentPage(page));
+  const handlePressIn = () => {
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 1500, // 3 seconds for full color change
+      useNativeDriver: false,
+    }).start(({ finished }) => {
+      if(finished){
+        createListing();
+      }
+    });
   };
+
+  const handlePressOut = () => {
+    Animated.timing(progress, {
+      toValue: 0,
+      duration: 500, // quickly reset to the initial state
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const animatedWidth = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'], // Start at 0% width and grow to 100%
+  });
   
   const ownerUID = auth.currentUser?.uid
 
@@ -76,12 +109,71 @@ const CreateListing = () => {
   };
 
   const handleDelete = () => {
+    const newImages = images.filter((_, index) => index !== imageIndex);
+    setImages(newImages);
+
+    scrollViewRef.current?.scrollTo({ x: imageIndex * screenWidth, animated: true });
 
   }
 
-  const uploadImages = async () => {
+  const createListing = async () => {
     if (images.length === 0) {
       Alert.alert("Please select at least one image first!");
+      return;
+    }
+
+    if (title === '') {
+      Alert.alert("A title is required");
+      return;
+    }
+
+    if (description === '') {
+      Alert.alert("A description is required");
+      return;
+    }
+
+    if (price === ''){
+      Alert.alert("A price is required");
+      return;
+    }
+
+    if (quantity === '') {
+      Alert.alert("A quantity is required");
+      return;
+    }
+
+    if (category === ''){
+      Alert.alert("A category is required");
+      return;
+    }
+
+    if (listingType === '') {
+      Alert.alert("A listing type is required");
+      return;
+    }
+
+    if (shippingType === '') {
+      Alert.alert("A shipping type is required");
+      return;
+    }
+
+    if (shippingType ==='variable' && weight===''){
+      Alert.alert("A weight is required")
+      return;
+    }
+
+    if (shippingType ==='variable' && shippingProfile===''){
+      Alert.alert("A shipping service is required")
+      return;
+    }
+
+    if (shippingType ==='fixed' && shippingCost===''){
+      Alert.alert("A shipping cost is required")
+      return;
+    }
+
+    if (Number(duration) > 14){
+      Alert.alert("Auctions cannot be longer than 2 weeks")
       return;
     }
   
@@ -124,12 +216,57 @@ const CreateListing = () => {
       const newDocRef = doc(db, "listings");
   
       await setDoc(newDocRef, {
+        images: downloadURLs, // Save all download URLs
         title: title,
         description: description,
         price: price,
-        images: downloadURLs, // Save all download URLs
+        quantity: quantity,
+        category: category,
+        ...(category.slice(-7)==='Singles' && genre==='Sports Cards'?{
+          ...(athlete && {athlete}),
+          ...(team && {team}),
+          ...(year && {year}),
+          ...(brand && {brand}),
+          ...(set && {set}),
+          ...(features && {features}),
+          ...(parallel && {parallel}),
+          ...(printRun && {printRun}),
+
+        }:{}),
+        ...(category.slice(-3)==='Lot' && genre==='Sports Cards'?{
+          ...(cardsInLot && {cardsInLot}),
+          ...(athlete?{athletes: athlete.split(',')}:{}),
+          ...(team?{teams: team.split(',')}:{}),
+          ...(year && {year}),
+          ...(brand && {brand}),
+          ...(set && {set}),
+          ...(features && {features})
+        }:{}),
+        ...(category.slice(-3)==='Wax' && genre==='Sports Cards'?{
+          ...(year && {year}),
+          ...(brand && {brand}),
+          ...(set && {set}),
+        }:{}),
+        ...(category.slice(-5)==='Break' && genre==='Sports Cards'?{
+          ...(athlete?{athletes: athlete.split(',')}:{}),
+          ...(team?{teams: team.split(',')}:{}),
+          ...(year && {year}),
+          ...(brand && {brand}),
+          ...(set && {set})
+        }:{}),
+        ...(genre === 'Sports Memorabilia'?{
+          ...(athlete && {athlete}),
+          ...(team && {team}),
+          ...(year && {year})
+        }:{}),
+        listingType: listingType,
+        ...(listingType === 'auction' ? {duration: duration} : {}),
+        offerable: offerable,
+        scheduled: scheduled,
+        ...(scheduled ? {date: date, time: time} : {}),
+        shippingType: shippingType,
+        ...(shippingType==='variable'?{weight:weight, shippingProfile: shippingProfile}: {shippingCost: shippingCost}),
         likes: 0,
-        offerable: true,
         ownerUID: auth.currentUser?.uid,
       });
   
@@ -142,16 +279,29 @@ const CreateListing = () => {
     }
   };  
 
-  const handleCategorySelect = (selectedCategory: string) => {
+  const handleCategorySelect = (selectedCategory: string, selectedGenre: string) => {
     setCategory(selectedCategory); // Update the main component's state
+    setGenre(selectedGenre);
   };
+
+  const handleBrandSelect = (selectedBrand: string) => {
+    setBrand(selectedBrand); 
+  };
+
+  const handleFeaturesSelect = (selectedFeatures: string[]) => {
+    setFeatures(selectedFeatures); 
+  };
+
+  const handleShippingSelect = (selectedShipping: string) => {
+    setShippingProfile(selectedShipping)
+  }
 
   return (
     <StyledView className='justify-center flex-1'>
       <StyledView className={`${minimized ? 'bg-gray': 'bg-white'} flex-1 h-full w-full`}>
         <StyledScrollView className='mt-16'>
           <StyledView className='h-96 mt-8'>
-            <StyledScrollView className='flex-1' horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={handleImageScroll} scrollEventThrottle={16}>
+            <StyledScrollView className='flex-1 h-full' horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={handleImageScroll} scrollEventThrottle={16}>
               {images.map((imageUri, index) => (
                   <StyledImageBackground
                     key={index}
@@ -159,7 +309,7 @@ const CreateListing = () => {
                     className="h-96"
                     style={{ width: screenWidth }}
                   >
-                    <StyledPressable className='flex justify-center items-center absolute top-2 right-2 w-12 h-12 bg-black rounded-full' onPress={handleDelete}>
+                    <StyledPressable className='flex justify-center items-center absolute top-8 right-4 w-12 h-12 bg-black rounded-full active:bg-gray' onPress={handleDelete} style={{ zIndex: 10 }}>
                       <StyledImage source={icons.trash} className='w-8 h-8'></StyledImage>
                     </StyledPressable>
                   </StyledImageBackground>
@@ -199,29 +349,563 @@ const CreateListing = () => {
               />
               <StyledText className='text-gray pl-2'>+ shipping & taxes</StyledText>
             </StyledView>
-          </StyledView>
-          <StyledView className='bg-gray mt-2 w-full h-px'/>
-          <StyledView className='flex pl-4 pr-4 mt-2 w-full'>
-            <StyledText className='text-2xl font-bold text-black'>Details</StyledText>
-            <StyledView className='flex-row gap-x-4'>
-              <StyledText className='text-lg'>Category: </StyledText>
-              <StyledPressable className='border-2 border-black rounded-lg'onPress={() => {setMinimized(true); setDirectory('category'); setCategoryModalVisible(true);}}>
-                {category==='' ? (
-                  <StyledText className='text-lg text-gray pl-12 pr-12'>Select Category</StyledText>
-                ):(
-                  <StyledText className='text-lg pl-12 pr-12'>{category}</StyledText>
-                )}
-                
-              </StyledPressable>
+            <StyledView className="flex flex-row items-center justify-between">
+              <StyledView className="flex flex-row items-center">
+                <StyledText className="text-lg">Quantity:</StyledText>
+                <StyledView className='border-2 border-gray rounded-xl ml-2'>
+                  <StyledTextInput 
+                    className="text-xl text-center w-12 mb-1 font-bold"
+                    value={quantity} 
+                    onChangeText={(text) => setQuantity(text)} 
+                    keyboardType="numeric" 
+                  />
+                </StyledView>
+              </StyledView>
             </StyledView>
           </StyledView>
+          <StyledView className='bg-gray mt-4 w-full h-px'/>
+          <StyledView className='flex pl-4 pr-4 mt-4 w-full'>
+            <StyledText className='text-2xl font-bold text-black'>Details</StyledText>
+            <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+              <StyledText className='text-lg'>Category: </StyledText>
+              <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setMinimized(true); setCategoryModalVisible(true);}}>
+                {category==='' ? (
+                  <StyledText className='text-lg text-gray text-center font-bold'>Select Category</StyledText>
+                ):(
+                  <StyledText className='text-lg text-primary text-center font-bold shadow-sm'>{category}</StyledText>
+                )}
+              </StyledPressable>
+            </StyledView>
+
+            {category.slice(-7)==='Singles' && genre==='Sports Cards' && (
+              <>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Athlete: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Athlete Name'
+                      placeholderTextColor='gray'
+                      value={athlete} 
+                      onChangeText={(text) => setAthlete(text)}
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Team: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Team Name'
+                      placeholderTextColor='gray'
+                      value={team} 
+                      onChangeText={(text) => setTeam(text)}
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Year: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Year'
+                      placeholderTextColor='gray'
+                      value={year} 
+                      onChangeText={(text) => setYear(text)}
+                      keyboardType='numeric'
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Brand: </StyledText>
+                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setMinimized(true); setBrandModalVisible(true);}}>
+                    {brand==='' ? (
+                      <StyledText className='text-lg text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
+                    ):(
+                      <StyledText className='text-lg text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
+                    )}
+                  </StyledPressable>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Set: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Set Name'
+                      placeholderTextColor='gray'
+                      value={set} 
+                      onChangeText={(text) => setSet(text)}
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Features: </StyledText>
+                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setMinimized(true); setFeaturesModalVisible(true);}}>
+                    {features.length===0 ? (
+                      <StyledText className='text-lg text-gray text-center font-bold shadow-sm'>Select Features</StyledText>
+                    ):(
+                      <StyledText className='text-lg text-primary text-center font-bold shadow-sm'>{features}</StyledText>
+                    )}
+                  </StyledPressable>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Parallel: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Parallel Name'
+                      placeholderTextColor='gray'
+                      value={parallel} 
+                      onChangeText={(text) => setParallel(text)}
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Print Run: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Print Run'
+                      placeholderTextColor='gray'
+                      value={printRun} 
+                      onChangeText={(text) => setPrintRun(text)}
+                      keyboardType='numeric'
+                    />
+                  </StyledView>
+                </StyledView>
+              </>
+            )}
+
+            {category.slice(-3)==='Lot' && genre==='Sports Cards' && (
+              <>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Cards in Lot: </StyledText>
+                  <StyledView className='flex-row items-center border-2 border-gray rounded-xl'>
+                    <StyledTextInput 
+                      className='text-xl text-center w-12 font-bold mb-1 shadow-sm text-primary'
+                      value={cardsInLot} 
+                      onChangeText={(text) => setCardsInLot(text)} 
+                      keyboardType="numeric" 
+                    />
+                    <StyledText className='text-lg mr-2 text-gray'>Cards</StyledText>
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Atheletes: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Athelete Names'
+                      placeholderTextColor='gray'
+                      value={athlete} 
+                      onChangeText={(text) => setAthlete(text)}
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Teams: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Team Names'
+                      placeholderTextColor='gray'
+                      value={team} 
+                      onChangeText={(text) => setTeam(text)}
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Year: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Year'
+                      placeholderTextColor='gray'
+                      value={year} 
+                      onChangeText={(text) => setYear(text)}
+                      keyboardType='numeric'
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Brand: </StyledText>
+                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setMinimized(true); setBrandModalVisible(true);}}>
+                    {brand==='' ? (
+                      <StyledText className='text-lg text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
+                    ):(
+                      <StyledText className='text-lg text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
+                    )}
+                  </StyledPressable>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Set: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Set Name'
+                      placeholderTextColor='gray'
+                      value={set} 
+                      onChangeText={(text) => setSet(text)}
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Features: </StyledText>
+                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setMinimized(true); setFeaturesModalVisible(true);}}>
+                    {features.length===0 ? (
+                      <StyledText className='text-lg text-gray text-center font-bold shadow-sm'>Select Features</StyledText>
+                    ):(
+                      <StyledText className='text-lg text-primary text-center font-bold shadow-sm'>{features}</StyledText>
+                    )}
+                  </StyledPressable>
+                </StyledView>
+              </>
+            )}
+
+            {category.slice(-3)==='Wax' && genre==='Sports Cards' && (
+              <>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Brand: </StyledText>
+                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setMinimized(true); setBrandModalVisible(true);}}>
+                    {brand==='' ? (
+                      <StyledText className='text-lg text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
+                    ):(
+                      <StyledText className='text-lg text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
+                    )}
+                  </StyledPressable>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Set: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Set Name'
+                      placeholderTextColor='gray'
+                      value={set} 
+                      onChangeText={(text) => setSet(text)}
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Year: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Year'
+                      placeholderTextColor='gray'
+                      value={year} 
+                      onChangeText={(text) => setYear(text)}
+                      keyboardType='numeric'
+                    />
+                  </StyledView>
+                </StyledView>
+              </>
+            )}
+
+            {category.slice(-5)==='Break' && genre==='Sports Cards' && (
+              <>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Athelete(s): </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Athelete Names'
+                      placeholderTextColor='gray'
+                      value={athlete} 
+                      onChangeText={(text) => setAthlete(text)}
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Team(s): </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Team Names'
+                      placeholderTextColor='gray'
+                      value={team} 
+                      onChangeText={(text) => setTeam(text)}
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Brand: </StyledText>
+                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setMinimized(true); setBrandModalVisible(true);}}>
+                    {brand==='' ? (
+                      <StyledText className='text-lg text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
+                    ):(
+                      <StyledText className='text-lg text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
+                    )}
+                  </StyledPressable>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Set: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Set Name'
+                      placeholderTextColor='gray'
+                      value={set} 
+                      onChangeText={(text) => setSet(text)}
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Year: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Year'
+                      placeholderTextColor='gray'
+                      value={year} 
+                      onChangeText={(text) => setYear(text)}
+                      keyboardType='numeric'
+                    />
+                  </StyledView>
+                </StyledView>
+              </>
+            )}
+
+            {genre === 'Sports Memorabilia' && (
+              <>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Athlete: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Athlete Name'
+                      placeholderTextColor='gray'
+                      value={athlete} 
+                      onChangeText={(text) => setAthlete(text)}
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Team: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Team Name'
+                      placeholderTextColor='gray'
+                      value={team} 
+                      onChangeText={(text) => setTeam(text)}
+                    />
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className='text-lg'>Year: </StyledText>
+                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8'>
+                    <StyledTextInput 
+                      className='text-lg text-primary text-center font-bold justify-center shadow-sm mb-1' 
+                      placeholder='Year'
+                      placeholderTextColor='gray'
+                      value={year} 
+                      onChangeText={(text) => setYear(text)}
+                      keyboardType='numeric'
+                    />
+                  </StyledView>
+                </StyledView>
+              </>
+            )}
+
+          </StyledView>
+          <StyledView className='bg-gray mt-4 w-full h-px'/>
+          <StyledView className='flex pl-4 pr-4 mt-4 w-full'>
+            <StyledText className='text-2xl font-bold text-black'>Pricing</StyledText>
+            <StyledView className='flex-row gap-x-4 mt-2 justify-between'>      
+                <StyledPressable className={`${listingType==='auction' && 'bg-primary'} flex-1 border-2 border-black rounded-2xl active:bg-gray`} onPress={() => setListingType('auction')}>
+                  <StyledText className={`${listingType==='auction' && 'text-white'} text-lg font-bold text-center`}>Auction</StyledText>
+                </StyledPressable>
+                <StyledPressable className={`${listingType==='buy now' && 'bg-primary'} flex-1 border-2 border-black rounded-2xl active:bg-gray`} onPress={() => setListingType('buy now')}>
+                  <StyledText className={`${listingType==='buy now' && 'text-white'} text-lg font-bold text-center`}>Buy Now</StyledText>
+                </StyledPressable>
+            </StyledView>
+
+              <>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
+                  <StyledText className='text-lg'>Price:</StyledText>
+                  <StyledView className='flex-row items-center justify-end'>
+                    <StyledText className='font-bold text-xl'>$ </StyledText>
+                    <StyledView className='flex-row justify-center items-center border-2 border-gray rounded-lg w-1/2 h-8'>
+                      <StyledTextInput 
+                        className='text-lg text-primary text-center font-bold justify-center mb-1 shadow-sm w-full' 
+                        placeholder='Price'
+                        placeholderTextColor='gray'
+                        value={price} 
+                        onChangeText={(text) => setPrice(text)}
+                        keyboardType='numeric'
+                      />
+                    </StyledView>
+                  </StyledView>
+                </StyledView>
+
+                {listingType==='auction' && (
+                  <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
+                    <StyledText className='text-lg'>Duration:</StyledText>
+                    <StyledView className='flex-row items-center border-2 border-gray rounded-xl'>
+                      <StyledTextInput 
+                        className='text-xl text-center w-12 font-bold mb-1 shadow-sm text-primary'
+                        value={duration} 
+                        onChangeText={(text) => setDuration(text)} 
+                        keyboardType="numeric" 
+                      />
+                      <StyledText className='text-lg mr-2 text-gray'>Day(s)</StyledText>
+                    </StyledView>
+                  </StyledView>
+                )}
+                <StyledView className="flex-row gap-x-4 mt-2 justify-between">
+                  <StyledText className="text-lg">Allow Offers:</StyledText>
+                  <StyledPressable className={`${offerable?'bg-primary':'border-2 border-gray'} flex justify-center items-center text-xl text-center w-8 h-8 ml-2 font-bold rounded-full active:bg-gray`} onPress={() => {setOfferable(!offerable)}}>
+                    {offerable && (
+                      <StyledImage source={icons.check} className='w-6 h-6'/>
+                    )}
+                  </StyledPressable>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                  <StyledText className={`${scheduled&&'font-bold'} text-lg`}>Schedule Start: </StyledText>
+                  <StyledPressable className={`${scheduled?'bg-primary':'border-2 border-gray'} flex justify-center items-center text-xl text-center w-8 h-8 ml-2 font-bold rounded-full active:bg-gray`} onPress={() => {setScheduled(!scheduled)}}>
+                    {scheduled && (
+                      <StyledImage source={icons.check} className='w-6 h-6'/>
+                    )}
+                  </StyledPressable>
+                </StyledView>
+                {scheduled && (
+                  <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                    <StyledView className='flex-row items-center'>
+                      <StyledText className='text-lg'>Date:</StyledText>
+                      <DateTimePicker
+                        testID="dateTimePicker"
+                        value={date}
+                        mode="date"
+                        is24Hour={true}
+                        display="default"
+                        onChange={(event, selectedDate) => setDate(selectedDate || date)}
+                      />
+                    </StyledView>
+                    <StyledView className='flex-row items-center'>
+                      <StyledText className='text-lg'>Time:</StyledText>
+                      <DateTimePicker
+                        testID="dateTimePicker"
+                        value={time}
+                        mode="time"
+                        is24Hour={true}
+                        display="default"
+                        onChange={(event, selectedTime) => setTime(selectedTime || time)}
+                      />
+                    </StyledView>
+                  </StyledView>
+                )}
+                 
+              </>
+          </StyledView>
+
+          <StyledView className='bg-gray mt-4 w-full h-px'/>
+          <StyledView className='flex pl-4 pr-4 mt-4 w-full'>
+            <StyledText className='text-2xl font-bold text-black'>Shipping</StyledText>
+            <StyledView className='flex-row gap-x-4 mt-2 justify-between'>      
+                <StyledPressable className={`${shippingType==='variable' && 'bg-primary'} flex-1 border-2 border-black rounded-2xl active:bg-gray`} onPress={() => setShippingType('variable')}>
+                  <StyledText className={`${shippingType==='variable' && 'text-white'} text-lg font-bold text-center`}>Variable</StyledText>
+                </StyledPressable>
+                <StyledPressable className={`${shippingType==='fixed' && 'bg-primary'} flex-1 border-2 border-black rounded-2xl active:bg-gray`} onPress={() => setShippingType('fixed')}>
+                  <StyledText className={`${shippingType==='fixed' && 'text-white'} text-lg font-bold text-center`}>Fixed Rate</StyledText>
+                </StyledPressable>
+            </StyledView>
+
+            {shippingType==='variable' && (
+              <>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
+                  <StyledText className='text-lg'>Weight:</StyledText>
+                  <StyledView className='flex-row items-center border-2 border-gray rounded-xl'>
+                    <StyledTextInput 
+                      className='text-xl text-center w-12 font-bold mb-1 shadow-sm text-primary'
+                      value={weight} 
+                      onChangeText={(text) => setWeight(text)} 
+                      keyboardType="numeric" 
+                    />
+                    <StyledText className='text-lg mr-2 text-gray'>Oz(s)</StyledText>
+                  </StyledView>
+                </StyledView>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
+                  <StyledText className='text-lg'>Shipping Service:</StyledText>
+                  <StyledPressable className='border-2 border-gray rounded-lg w-1/2 active:bg-gray' onPress={() => {setMinimized(true); setShippingModalVisible(true);}}>
+                    {shippingProfile==='' ? (
+                      <StyledText className='text-lg text-gray text-center font-bold'>Select Shipping</StyledText>
+                    ):(
+                      <StyledText className='pr-2 pl-2 text-lg text-primary text-center font-bold shadow-sm'>{shippingProfile}</StyledText>
+                    )}
+                  </StyledPressable>
+                </StyledView>
+              </>
+            )}
+
+            {shippingType==='fixed' && (
+              <>
+                <StyledText className='text-gray mt-1'>*Charge your buyer a flat shipping cost. If the amount is less than the shipping cost, you pay the difference. Choose this option to use your own shipping labels or offer your buyers discounted shipping.</StyledText>
+                <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
+                    <StyledText className='text-lg'>Buyer Pays:</StyledText>
+                    <StyledView className='flex-row items-center justify-end'>
+                      <StyledText className='font-bold text-xl'>$ </StyledText>
+                      <StyledView className='flex-row justify-center items-center border-2 border-gray rounded-lg w-1/2 h-8'>
+                        <StyledTextInput 
+                          className='text-lg text-primary text-center font-bold justify-center mb-1 shadow-sm w-full' 
+                          placeholder=''
+                          placeholderTextColor='gray'
+                          value={shippingCost} 
+                          onChangeText={(text) => setShippingCost(text)}
+                          keyboardType='numeric'
+                        />
+                      </StyledView>
+                    </StyledView>
+                  </StyledView>
+              </>
+            )}
+          </StyledView>
+
+
+          <StyledView className='bg-gray mt-4 w-full h-px'/>
+          <StyledView className='flex pl-4 pr-4 mt-4 w-full items-center'>
+            <StyledPressable 
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut} 
+              disabled={uploading} 
+              className='flex overflow-hidden items-center w-full border-2 border-black bg-primary rounded-full'>
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  backgroundColor: '#00FF00', // Green color
+                  width: animatedWidth, // Animate the width
+                }}
+              />
+              <StyledText className='text-3xl font-bold text-white p-2'>Create Listing</StyledText>
+            </StyledPressable>
+          </StyledView>
+          <StyledView className='w-full h-24'/>
+
           <CategoryModal visible={categoryModalVisible}
             onClose={() => {setMinimized(false); setCategoryModalVisible(false);}}
-            onSelectCategory={handleCategorySelect}
+            onSelectCategory={(category: string, selectedGenre: string) => handleCategorySelect(category, selectedGenre)}
           />
-          <StyledPressable onPress={uploadImages} disabled={uploading}>
-            <StyledText>Create Listing</StyledText>
-          </StyledPressable>
+
+          <BrandModal 
+            visible={brandModalVisible}
+            onClose={() => {setMinimized(false); setBrandModalVisible(false);}}
+            onSelectBrand={(brand: string) => handleBrandSelect(brand)}
+          />
+
+          <FeaturesModal
+            visible={featuresModalVisible}
+            onClose={() => {setMinimized(false); setFeaturesModalVisible(false);}}
+            onSelectFeatures={(features:string[]) => handleFeaturesSelect(features)}
+          />
+
+          <ShippingModal
+            visible={shippingModalVisible}
+            onClose={() => {setMinimized(false); setShippingModalVisible(false);}} 
+            onSelectShipping={(shipping:string) => handleShippingSelect(shipping)}
+          />
         </StyledScrollView>
       </StyledView>
     </StyledView>

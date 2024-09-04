@@ -11,12 +11,12 @@ type TabIconProps = {
   focused: boolean;
 };
 
-const TabIcon = ({icon,color,name,focused}:TabIconProps) => {
-  const StyledPressable = styled(Pressable)
-  const StyledImage = styled(Image)
-  const StyledView = styled(View)
-  const StyledText = styled(Text)
+const StyledPressable = styled(Pressable)
+const StyledImage = styled(Image)
+const StyledView = styled(View)
+const StyledText = styled(Text)
 
+const TabIcon = ({icon,color,name,focused}:TabIconProps) => {
   return (
     <StyledView>
       <StyledImage 

@@ -35,7 +35,6 @@ const Index = () => {
   const imageBackgroundHeight = screenHeight - tabBarHeight;  
   const router = useRouter();
   const [isLiked, setIsLiked] = useState(false);
-  const StyledButton = styled(Pressable)
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -46,6 +45,16 @@ const Index = () => {
 
   const [user, setUser] = useState<User | null>(null); // `User` is the Firebase User type or null
 
+  useEffect(() => {
+    fetchRandomListing();  // Initial fetch
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+
+    // Clean up the subscription when the component unmounts
+    return () => unsubscribe();
+  }, [auth]);
+  
   const fetchRandomListing = async () => {
     try {
       // Randomly select a document ID; adjust as needed for your use case
@@ -104,16 +113,6 @@ const Index = () => {
     inputRange: [0, 1],
     outputRange: ['0%', '100%'], // Start at 0% width and grow to 100%
   });
-
-  useEffect(() => {
-    fetchRandomListing();  // Initial fetch
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-    });
-
-    // Clean up the subscription when the component unmounts
-    return () => unsubscribe();
-  }, [auth]);
 
   const handleLike = async (docId: number, currentLikes: number) => {
     if (user) {
@@ -212,9 +211,9 @@ const Index = () => {
               <StyledImage source={icons.circle} className='mt-6 h-12 w-12'/>
             </Pressable>
 
-            <StyledButton style={{ marginTop: 4, borderColor: 'white', borderWidth: 2, borderRadius: 16 }} onPress={handleFollow}>
+            <StyledPressable style={{ marginTop: 4, borderColor: 'white', borderWidth: 2, borderRadius: 16 }} onPress={handleFollow}>
               <StyledText className='text-white text-center'>ADD</StyledText>
-            </StyledButton>
+            </StyledPressable>
           </StyledView>
 
           <StyledView className='absolute bottom-0 h-2/5 w-full inset-x-0'>
