@@ -12,6 +12,8 @@ import carrotBlack from "../assets/icons/carrotBlack.png"
 import trash from "..//assets/icons/trash.png"
 import x from '..//assets/icons/x.png'
 import check from '..//assets/icons/check.png'
+import eye from '..//assets/icons/eye.png'
+import eyePass from '..//assets/icons/eyePass.png'
 
 
 export default {
@@ -28,5 +30,7 @@ export default {
   carrotBlack,
   trash,
   x,
-  check
+  check,
+  eye,
+  eyePass
 };

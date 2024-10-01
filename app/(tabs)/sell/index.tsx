@@ -3,9 +3,12 @@ import React, { useEffect, useState } from 'react'
 import { styled } from 'nativewind'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { getAuth, onAuthStateChanged} from 'firebase/auth';
 
 import sellerExample from '../../../assets/images/sellerExample.png'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/firebaseConfig'
 
 const StyledPressable = styled(Pressable)
 const StyledView = styled(View)
@@ -17,20 +20,47 @@ const sell = () => {
   const auth = getAuth();
   const router = useRouter();
 
-  const [loading,setLoading]=useState(true)
-
-  const [user, setUser] = useState<User | null>(null); // `User` is the Firebase User type or null
+  const [signedIn, setSignedIn] = useState(false);
+  const [isSeller, setIsSeller] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    // Listen for changes in the user's auth state
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+
+        // Optionally, store the user's ID token in AsyncStorage if needed for backend API requests
+        const idToken = await user.getIdToken();
+        await AsyncStorage.setItem('userToken', idToken);
+
+        setSignedIn(true); // Update the local state to reflect that the user is signed in
+      } else {
+        // No user is signed in
+        setSignedIn(false); // Update the state to reflect that the user is not signed in
+      }
     });
 
-    // Clean up the subscription when the component unmounts
+    // Clean up the listener on component unmount
     return () => unsubscribe();
-  }, [auth]);
+  }, []);
 
-  if(!user){
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const user = auth.currentUser;
+
+      if (user) {
+        const userDoc = await getDoc(doc(db, 'userData', user.uid));
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setIsSeller(userData.seller); // Access seller status
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  if(!signedIn){
     return (
       <StyledView className='flex-1 w-full h-full'>
         <StyledView className='flex mt-16 h-96'>
@@ -45,11 +75,11 @@ const sell = () => {
         </StyledView>
         <StyledView className='flex absolute w-full h-32 bottom-12'>
           <StyledImage />
-          <StyledPressable onPress={() => { router.push('/signIn') }} className='flex justify-center bg-primary flex-1 mr-4 ml-4 rounded-full'>
+          <StyledPressable onPress={() => { router.push('/(auth)') }} className='flex justify-center bg-primary flex-1 mr-4 ml-4 rounded-full active:bg-primaryDark'>
             <StyledText className='text-white text-center font-bold text-3xl p-2'>Sign In</StyledText>
           </StyledPressable>
 
-          <StyledPressable onPress={() => { router.push('/signUp') }} className='flex justify-center flex-1 ml-4 mr-4 mt-4 rounded-full border-2 border-black'>
+          <StyledPressable onPress={() => { router.push('/signUp') }} className='flex justify-center flex-1 ml-4 mr-4 mt-4 rounded-full border-2 border-black active:bg-darkGray'>
             <StyledText className='text-black text-center font-bold text-3xl p-2'>Sign Up</StyledText>
           </StyledPressable>
         </StyledView>
@@ -59,9 +89,15 @@ const sell = () => {
 
   return (
     <StyledSafeAreaView className='mt-16'>
-      <StyledPressable onPress={() => {router.push('/(tabs)/sell/createListing')}}>
-        <Text>Create Listing</Text>
+      {isSeller ? (
+        <StyledPressable onPress={() => {router.push('/(tabs)/sell/createListing')}}>
+          <Text>Create Listing</Text>
+        </StyledPressable>
+      ):(
+      <StyledPressable onPress={() => {router.push('/(auth)/sellerSignUp')}}>
+        <Text>Become a Seller</Text>
       </StyledPressable>
+      )}   
     </StyledSafeAreaView>
   )
 }

@@ -1,9 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { View, Pressable, Image, Alert, Animated, TextInput, Text, ScrollView, ImageBackground, Dimensions, Modal } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { db, storage, auth } from '../../../../firebaseConfig';
-import { doc, setDoc } from "firebase/firestore"; 
 import { styled } from 'nativewind';
 import icons from '../../../../constants/icons'
 
@@ -12,21 +8,21 @@ const StyledImage = styled(Image)
 const StyledView = styled(View)
 const StyledText = styled(Text)
 const StyledScrollView = styled(ScrollView)
-const StyledImageBackground = styled(ImageBackground)
-const StyledTextInput = styled(TextInput)
 
 const { width: screenWidth } = Dimensions.get('window');
 
-const CategoryModal = ({ visible, onClose, onSelectCategory }) => {
-    const [categoryModalVisible, setCategoryModalVisible] = useState(false);
-    const [minimized, setMinimized] = useState(false);
+interface CategoryModalProps{
+    visible: boolean;
+    onClose: () => void;
+    onSelectCategory: (category:string, genre:string) => void;
+}
+
+const CategoryModal: React.FC<CategoryModalProps> = ({ visible, onClose, onSelectCategory }) => {
     const [currentPage, setCurrentPage] = useState(''); 
-    const [directory, setDirectory] = useState(''); 
     const [currentSubpage, setCurrentSubpage] = useState('')
     const [theme, setTheme] = useState('')
     const [genre, setGenre] = useState('')
     const slideAnim = useRef(new Animated.Value(0)).current; // Initial value for the animation
-    const [category, setCategory] = useState('');
 
     const themeOptions = ['Sports Cards', 'Trading Card Games', 'Sports Memorabilia', 'Comics & Manga', 'Toys & Collectibles']
     const sportsOptions = ['Baseball', 'Basketball', 'F1', 'Football', 'Golf', 'Hockey', 'NASCAR', 'Soccer', 'Tennis', 'UFC', 'Wrestling', 'Other Sports']

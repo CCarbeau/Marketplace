@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { View, Pressable, Image, Alert, Animated, TextInput, Text, ScrollView, ImageBackground, Dimensions, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { Router, useRouter } from 'expo-router';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, auth } from '../../../../firebaseConfig';
-import { doc, setDoc } from "firebase/firestore"; 
+import { collection, addDoc } from "firebase/firestore"; 
 import { styled } from 'nativewind';
 
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -12,6 +13,7 @@ import CategoryModal from './category'
 import BrandModal from './brand';
 import FeaturesModal from './features';
 import ShippingModal from './shipping';
+import UploadingModal from './uploading';
 
 const StyledPressable = styled(Pressable)
 const StyledImage = styled(Image)
@@ -25,6 +27,7 @@ const { width: screenWidth } = Dimensions.get('window');
 
 const CreateListing = () => {
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [imageIndex, setImageIndex]= useState(0);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [brandModalVisible, setBrandModalVisible] = useState(false);
@@ -32,6 +35,8 @@ const CreateListing = () => {
   const [shippingModalVisible, setShippingModalVisible] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const router = useRouter();
+  const delay = (ms: any) => new Promise(resolve => setTimeout(resolve, ms));
   
   const [category, setCategory] = useState('');
   const [genre, setGenre] = useState('')
@@ -178,12 +183,23 @@ const CreateListing = () => {
     }
   
     setUploading(true);
+    setMinimized(true);
     const downloadURLs: string[] = [];
+    const uploadedImageRefs: any[] = [];
   
     try {
       for (const image of images) {
-        const response = await fetch(image);
-        const blob = await response.blob();
+        // Fetch image and handle potential errors
+        let blob;
+        try {
+          const response = await fetch(image);
+          blob = await response.blob();
+        } catch (error) {
+          Alert.alert("Error", "Failed to fetch image. Please try again.");
+          console.error('Error fetching image:', error);
+          throw error;
+        }
+  
         const filename = image.substring(image.lastIndexOf('/') + 1);
         const storageRef = ref(storage, `images/${filename}`);
   
@@ -192,15 +208,23 @@ const CreateListing = () => {
         await new Promise<void>((resolve, reject) => {
           uploadTask.on(
             'state_changed',
+            // Handle progress (if needed)
+            (snapshot) => {
+              setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+            },
+            // Handle error properly here
             (error) => {
+              console.error('Upload error:', error);
               Alert.alert('Upload failed!');
               reject(error);
             },
+            // Handle successful completion
             async () => {
               try {
                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                 console.log('File available at', downloadURL);
                 downloadURLs.push(downloadURL);
+                uploadedImageRefs.push(storageRef);
                 resolve();
               } catch (error) {
                 console.error('Error getting download URL:', error);
@@ -213,9 +237,9 @@ const CreateListing = () => {
       }
   
       // After all images are uploaded, save the listing data in Firestore
-      const newDocRef = doc(db, "listings");
+      const newDocRef = collection(db, "listings");
   
-      await setDoc(newDocRef, {
+      await addDoc(newDocRef, {
         images: downloadURLs, // Save all download URLs
         title: title,
         description: description,
@@ -269,13 +293,29 @@ const CreateListing = () => {
         likes: 0,
         ownerUID: auth.currentUser?.uid,
       });
-  
-      Alert.alert('Upload successful!', 'Listing created successfully.');
+      
+      await delay(1000);
+
       setUploading(false);
+      setMinimized(false);
+      router.back();
+
     } catch (error) {
       console.error('Error uploading images:', error);
-      Alert.alert('Error', 'Failed to upload images.');
+      Alert.alert('Error', 'Failed to upload images or create the listing.');
+
+      // If Firestore upload fails, delete the images from Firebase Storage
+      for (const storageRef of uploadedImageRefs) {
+        try {
+          await deleteObject(storageRef);
+          console.log('Deleted uploaded image from storage:', storageRef.fullPath);
+        } catch (deleteError) {
+          console.error('Failed to delete image from storage:', deleteError);
+        }
+      }
+
       setUploading(false);
+      setMinimized(false);
     }
   };  
 
@@ -444,7 +484,7 @@ const CreateListing = () => {
                     {features.length===0 ? (
                       <StyledText className='text-lg text-gray text-center font-bold shadow-sm'>Select Features</StyledText>
                     ):(
-                      <StyledText className='text-lg text-primary text-center font-bold shadow-sm'>{features}</StyledText>
+                      <StyledText className='text-lg text-primary text-center font-bold shadow-sm'>{features.join(', ')}</StyledText>
                     )}
                   </StyledPressable>
                 </StyledView>
@@ -728,7 +768,7 @@ const CreateListing = () => {
                     <StyledText className='font-bold text-xl'>$ </StyledText>
                     <StyledView className='flex-row justify-center items-center border-2 border-gray rounded-lg w-1/2 h-8'>
                       <StyledTextInput 
-                        className='text-lg text-primary text-center font-bold justify-center mb-1 shadow-sm w-full' 
+                        className='text-xl text-primary text-center font-bold justify-center mb-1 shadow-sm w-full' 
                         placeholder='Price'
                         placeholderTextColor='gray'
                         value={price} 
@@ -847,7 +887,7 @@ const CreateListing = () => {
                       <StyledText className='font-bold text-xl'>$ </StyledText>
                       <StyledView className='flex-row justify-center items-center border-2 border-gray rounded-lg w-1/2 h-8'>
                         <StyledTextInput 
-                          className='text-lg text-primary text-center font-bold justify-center mb-1 shadow-sm w-full' 
+                          className='text-xl text-primary text-center font-bold justify-center mb-1 shadow-sm w-full' 
                           placeholder=''
                           placeholderTextColor='gray'
                           value={shippingCost} 
@@ -906,6 +946,13 @@ const CreateListing = () => {
             onClose={() => {setMinimized(false); setShippingModalVisible(false);}} 
             onSelectShipping={(shipping:string) => handleShippingSelect(shipping)}
           />
+
+          <UploadingModal
+            visible={uploading}
+            progress={uploadProgress}
+            onClose={() => {setMinimized(false);}}
+          />
+
         </StyledScrollView>
       </StyledView>
     </StyledView>

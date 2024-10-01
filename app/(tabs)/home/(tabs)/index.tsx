@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, Pressable, ImageBackground, FlatList, Dimensions, Alert, Animated, Platform, Modal, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { styled } from 'nativewind';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/firebaseConfig'; // Import your storage instance
 import { LinearGradient } from 'expo-linear-gradient';
 import icons from '../../../../constants/icons';
+import { getAuth, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const StyledPressable = styled(Pressable)
 const StyledImage = styled(Image)
@@ -41,19 +42,36 @@ const Index = () => {
   const [currentListingIndex, setCurrentListingIndex] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
 
+  const [ signedIn, setSignedIn ] = useState(false);
   const auth = getAuth();
-
-  const [user, setUser] = useState<User | null>(null); // `User` is the Firebase User type or null
 
   useEffect(() => {
     fetchRandomListing();  // Initial fetch
+  }, []);
+
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      const token = await AsyncStorage.getItem('userToken');
+      if (token) {
+        // Sign in the user with the token (Firebase client now tracks the session)
+        await signInWithCustomToken(auth, token);
+      }
+    };
+
+    checkAuthStatus();
+  }, []);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+      if (user) {
+        setSignedIn(true);
+      } else {
+        setSignedIn(false);
+      }
     });
 
-    // Clean up the subscription when the component unmounts
     return () => unsubscribe();
-  }, [auth]);
+  }, []);
   
   const fetchRandomListing = async () => {
     try {
@@ -115,7 +133,7 @@ const Index = () => {
   });
 
   const handleLike = async (docId: number, currentLikes: number) => {
-    if (user) {
+    if (signedIn) {
       try {
         setIsLiked(!isLiked);
         const newLikes = isLiked ? currentLikes - 1 : currentLikes + 1;
@@ -133,7 +151,7 @@ const Index = () => {
         console.error("Error updating likes:", error);
       }
     } else {
-      router.push('signIn')
+      router.push('/(auth)/')
     }
   };
 
@@ -188,7 +206,7 @@ const Index = () => {
               end={{ x: 0.5, y: 1 }}   // Gradient end point
               style={{ flex: 1, justifyContent: 'center'}}
             >
-              <StyledPressable className='absolute right-4 bottom-8' onPress={() => router.push('(tabs)/home/(tabs)/messages')}>
+              <StyledPressable className='absolute right-4 bottom-8' onPress={() => router.push('/(tabs)/home/(tabs)/messages')}>
                 <StyledImage 
                   source={icons.message} 
                   className='h-8 w-8'
@@ -231,7 +249,7 @@ const Index = () => {
                 </StyledPressable>
                 <StyledView className='flex-1 flex-row mb-2 justify-center ml-4 mr-4'>
                   <StyledPressable 
-                    className='flex-1 flex-row basis-2/3 mt-2 bg-primary rounded-2xl border-2 border-white overflow-hidden justify-center items-center' 
+                    className='flex-1 flex-row basis-2/3 mt-2 bg-primary active:bg-primaryDark rounded-2xl border-2 border-white overflow-hidden justify-center items-center' 
                     onPressIn={handlePressIn}
                     onPressOut={handlePressOut}
                   >
@@ -248,7 +266,7 @@ const Index = () => {
                     <StyledText className='text-white text-2xl text-center font-bold shadow-sm shadow-gray'>${item.price}</StyledText>
                     <StyledText className='pl-8 text-white text-2xl text-center shadow-sm shadow-gray'>Buy Now</StyledText>
                   </StyledPressable>
-                  <StyledPressable className='flex-1 mt-2 bg-black rounded-2xl border-2 border-white justify-center basis-1/3' onPress={handleOffer}>
+                  <StyledPressable className='flex-1 mt-2 bg-darkGray active:bg-gray rounded-2xl border-2 border-white justify-center basis-1/3' onPress={handleOffer}>
                     <StyledText className='text-white text-2xl text-center'>Offer</StyledText>
                   </StyledPressable>
                 </StyledView>

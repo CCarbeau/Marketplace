@@ -1,9 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { View, Pressable, Image, Alert, Animated, TextInput, Text, ScrollView, ImageBackground, Dimensions, Modal } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { db, storage, auth } from '../../../../firebaseConfig';
-import { doc, setDoc } from "firebase/firestore"; 
 import { styled } from 'nativewind';
 import icons from '../../../../constants/icons'
 
@@ -12,12 +8,16 @@ const StyledImage = styled(Image)
 const StyledView = styled(View)
 const StyledText = styled(Text)
 const StyledScrollView = styled(ScrollView)
-const StyledImageBackground = styled(ImageBackground)
-const StyledTextInput = styled(TextInput)
 
 const { width: screenWidth } = Dimensions.get('window');
 
-const ShippingModal = ({ visible, onClose, onSelectShipping }) => {
+interface ShippingModalProps {
+    visible: boolean;
+    onClose: () => void; 
+    onSelectShipping: (shipping: string) => void; 
+}
+  
+const ShippingModal: React.FC<ShippingModalProps> = ({ visible, onClose, onSelectShipping }) => {
     // const options = {
     // 'USPS First Class Mail Letter': {'cost': 1, 'size': '6.13 x 11.15 x 1/4 in', 'weight': '<3.5 oz'}, 
     // 'USPS First Class Mail Envelope':{'cost': 2, 'size': '12 x 15 x 3/4 in', 'weight': '<13 oz'},

@@ -2,7 +2,7 @@ import { View, Text, TextInput, Image, Pressable } from 'react-native'
 import React from 'react'
 import { styled } from 'nativewind'
 
-import icons from "../../constants/icons.js"
+import icons from '../../constants/icons'
 
 const StyledPressable = styled(Pressable)
 const StyledImage = styled(Image)

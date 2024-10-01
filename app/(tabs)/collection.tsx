@@ -5,6 +5,7 @@ import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { useRouter } from 'expo-router'
 
 import collectionExample from '../../assets/images/collectionExample.png'
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const StyledPressable = styled(Pressable)
 const StyledImage = styled(Image)
@@ -15,20 +16,30 @@ const collection = () => {
   const router = useRouter();
   const auth = getAuth();
 
-  const [loading,setLoading]=useState(true)
-
-  const [user, setUser] = useState<User | null>(null); // `User` is the Firebase User type or null
-
+  const [loading,setLoading]=useState(true);
+  const [signedIn, setSignedIn]= useState(false);
+  
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    // Listen for changes in the user's auth state
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+
+        // Optionally, store the user's ID token in AsyncStorage if needed for backend API requests
+        const idToken = await user.getIdToken();
+        await AsyncStorage.setItem('userToken', idToken);
+
+        setSignedIn(true); // Update the local state to reflect that the user is signed in
+      } else {
+        // No user is signed in
+        setSignedIn(false); // Update the state to reflect that the user is not signed in
+      }
     });
 
-    // Clean up the subscription when the component unmounts
+    // Clean up the listener on component unmount
     return () => unsubscribe();
-  }, [auth]);
+  }, []);
 
-  if(!user){
+  if(!signedIn){
     return (
       <StyledView className='flex-1 w-full h-full'>
         <StyledView className='flex mt-16 h-96'>
@@ -43,11 +54,11 @@ const collection = () => {
         </StyledView>
         <StyledView className='flex absolute w-full h-32 bottom-12'>
           <StyledImage />
-          <StyledPressable onPress={() => { router.push('/signIn') }} className='flex justify-center bg-primary flex-1 mr-4 ml-4 rounded-full'>
+          <StyledPressable onPress={() => { router.push('/(auth)') }} className='flex justify-center bg-primary flex-1 mr-4 ml-4 rounded-full'>
             <StyledText className='text-white text-center font-bold text-3xl p-2'>Sign In</StyledText>
           </StyledPressable>
 
-          <StyledPressable onPress={() => { router.push('/signUp') }} className='flex justify-center flex-1 ml-4 mr-4 mt-4 rounded-full border-2 border-black'>
+          <StyledPressable onPress={() => { router.push('/(auth)/signUp') }} className='flex justify-center flex-1 ml-4 mr-4 mt-4 rounded-full border-2 border-black'>
             <StyledText className='text-black text-center font-bold text-3xl p-2'>Sign Up</StyledText>
           </StyledPressable>
         </StyledView>

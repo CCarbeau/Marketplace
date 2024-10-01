@@ -1,9 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { View, Pressable, Image, Alert, Animated, TextInput, Text, ScrollView, ImageBackground, Dimensions, Modal } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { db, storage, auth } from '../../../../firebaseConfig';
-import { doc, setDoc } from "firebase/firestore"; 
 import { styled } from 'nativewind';
 import icons from '../../../../constants/icons'
 
@@ -12,12 +8,16 @@ const StyledImage = styled(Image)
 const StyledView = styled(View)
 const StyledText = styled(Text)
 const StyledScrollView = styled(ScrollView)
-const StyledImageBackground = styled(ImageBackground)
-const StyledTextInput = styled(TextInput)
 
 const { width: screenWidth } = Dimensions.get('window');
 
-const BrandModal = ({ visible, onClose, onSelectBrand }) => {
+interface BrandModalProps {
+    visible: boolean;
+    onClose: () => void;
+    onSelectBrand: (brand:string) => void;
+}
+
+const BrandModal: React.FC<BrandModalProps> = ({ visible, onClose, onSelectBrand }) => {
     const options = ['Bowman', 'Donruss', 'Fleer', 'Leaf', 'NBA Properties', 'Panini', 'Topps', 'Upper Deck', 'Other']
 
     const handleBrandSelect = (brand: string) => {

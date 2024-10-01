@@ -1,9 +1,11 @@
 import { Redirect } from "expo-router"
 
-const index = () => {
+console.log("Home component is rendering");
+
+const Index = () => {
   return (
-    <Redirect href="(tabs)/home"></Redirect>
+    <Redirect href='/(auth)/sellerSignUp'></Redirect>
   )
 }
 
-export default index
+export default Index
