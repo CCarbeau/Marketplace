@@ -5,7 +5,7 @@ const bodyParser = require('body-parser');
 const Stripe = require('stripe');
 const stripe = Stripe('sk_test_51Q2AmbKoG2b0XRLYtU9AC8sQcdDOQLCAzjXxSVKIpXq81b46GteyJIukHvB1sLaJGI25JdenKhdH2yYTSUnkUPxO008uz6UoUc'); 
 const { getAuth, createUserWithEmailAndPassword } = require('firebase/auth'); // Use require for Firebase
-const { doc, setDoc } = require('firebase/firestore'); // Use require for Firestore
+const { doc, setDoc, arrayUnion } = require('firebase/firestore'); // Use require for Firestore
 const { auth, db, storage } = require('../firebaseAdminConfig');
 
 const API_URL = 'http://localhost:5000'
@@ -94,17 +94,91 @@ app.post('/register-user', async (req, res) => {
 
 // Firebase Firestore Example (Add Listing)
 app.post('/add-listing', async (req, res) => {
+  const { downloadURLs, title, description, price, quantity, category, genre, athlete, team, year, brand, set, features, parallel, printRun, cardsInLot, athletes, teams, listingType, duration, offerable, scheduled, date, time, shippingType, weight, shippingProfile, shippingCost } = req.body;
+
   try {
-    const { title, description, price } = req.body;
-    const docRef = await db.collection('listings').add({
-      title,
-      description,
-      price,
-      createdAt: new Date(), // Adjust to use Firestore timestamps if needed
+    // Construct docData based on request body fields
+    const docData = {
+      images: downloadURLs, // Save all download URLs
+      title: title || '', // Default to empty string if title is missing
+      description: description || '',
+      price: price || 0,
+      quantity: quantity || 1,
+      category: category || '',
+      ...(category && category.slice(-7) === 'Singles' && genre === 'Sports Cards' ? {
+        ...(athlete && { athlete }),
+        ...(team && { team }),
+        ...(year && { year }),
+        ...(brand && { brand }),
+        ...(set && { set }),
+        ...(features && { features }),
+        ...(parallel && { parallel }),
+        ...(printRun && { printRun }),
+      } : {}),
+      ...(category && category.slice(-3) === 'Lot' && genre === 'Sports Cards' ? {
+        ...(cardsInLot && { cardsInLot }),
+        ...(athlete && { athletes: athletes.split(',') }),
+        ...(team && { teams: teams.split(',') }),
+        ...(year && { year }),
+        ...(brand && { brand }),
+        ...(set && { set }),
+        ...(features && { features }),
+      } : {}),
+      ...(category && category.slice(-3) === 'Wax' && genre === 'Sports Cards' ? {
+        ...(year && { year }),
+        ...(brand && { brand }),
+        ...(set && { set }),
+      } : {}),
+      ...(category && category.slice(-5) === 'Break' && genre === 'Sports Cards' ? {
+        ...(athlete && { athletes: athlete.split(',') }),
+        ...(team && { teams: team.split(',') }),
+        ...(year && { year }),
+        ...(brand && { brand }),
+        ...(set && { set }),
+      } : {}),
+      ...(genre === 'Sports Memorabilia' ? {
+        ...(athlete && { athlete }),
+        ...(team && { team }),
+        ...(year && { year }),
+      } : {}),
+      listingType: listingType || 'fixed',
+      ...(listingType === 'auction' ? { duration: duration || 0 } : {}),
+      offerable: offerable || false,
+      scheduled: scheduled || false,
+      ...(scheduled ? { date: date || '', time: time || '' } : {}),
+      shippingType: shippingType || 'flat',
+      ...(shippingType === 'variable' ? { weight: weight || 0, shippingProfile: shippingProfile || '' } : { shippingCost: shippingCost || 0 }),
+      likes: 0,
+      ownerUID: req.body.ownerUID, 
+      pfp: '',
+      rating: 0,
+      itemsSold: 0,
+      createdAt: new Date(),
+      random: Math.random(),
+    };
+
+    // Add the document to the collection using async/await
+    const docRef = await db.collection('listings').add(docData);
+
+    // Get the document ID
+    const listingId = docRef.id;
+    
+    // Generate the URL for the listing
+    const listingUrl = `/listing/${listingId}`; 
+
+    const userRef = doc(db, 'users', req.body.ownerUID);
+    await userRef.update({
+      listing: arrayUnion(listingId),
+    })
+
+
+    res.status(200).send({ 
+      message: 'Listing added successfully!', 
+      listingUrl: listingUrl,
     });
-    res.status(201).send({ listingId: docRef.id });
   } catch (error) {
-    res.status(400).send({ error: error.message });
+    res.status(500).send({ error: 'Failed to add listing.' });
+   
   }
 });
 

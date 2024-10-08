@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { View, Pressable, Image, Alert, Animated, TextInput, Text, ScrollView, ImageBackground, Dimensions, Modal } from 'react-native';
+import { View, Pressable, Image, Alert, Animated, StyleSheet, Text, ScrollView, ImageBackground, Dimensions } from 'react-native';
+import Modal from 'react-native-modal'
 import { styled } from 'nativewind';
 import icons from '../../../../constants/icons'
 
@@ -56,8 +57,16 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ visible, onClose, onSelec
     };
 
     return(
-        <Modal animationType='slide' transparent={true} visible={visible}>
-            <StyledView className='flex-1 bg-opacity-50 justify-end'>
+        <Modal
+            isVisible={visible} 
+            style={styles.modal}
+            onBackdropPress={onClose} 
+            swipeDirection="down"
+            onSwipeComplete={onClose}
+            animationIn="slideInUp"
+            animationOut="slideOutDown"
+        >
+            <StyledView className='flex-1 justify-end' style={{backgroundColor: 'rgba(0, 0, 0, 0.5)',}}>
                 <StyledView className='h-5/6 w-full bg-white rounded-xl shadow-black shadow-xl overflow-hidden'>
                     <Animated.View style={{ flexDirection: 'row', width: screenWidth * 3, transform: [{ translateX: slideAnim }] }}>
                         
@@ -606,5 +615,13 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ visible, onClose, onSelec
         </Modal>
     )
 }
+
+const styles = StyleSheet.create({
+    modal: {
+      justifyContent: 'flex-end',
+      margin: 0, // Ensures modal takes full width of the screen
+    },
+});
+
 
 export default CategoryModal;

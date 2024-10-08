@@ -9,7 +9,10 @@ module.exports = {
         white: "#F6F6F6",
         black: "#000000",
         gray: "#8C8C8C",
-        darkGray: '#424242'
+        darkGray: '#424242',
+        lightGray: '#BDBDBD',
+        darkWhite: '#EBEBEB',
+        darkerWhite: '#D9D9D9'
       },
       fontFamily: {
         pblack: ["Poppins-Black", "sans-serif"]

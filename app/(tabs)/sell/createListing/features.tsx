@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { View, Pressable, Image, Alert, Animated, TextInput, Text, ScrollView, ImageBackground, Dimensions, Modal } from 'react-native'
+import { View, Pressable, Image, StyleSheet, Animated, TextInput, Text, ScrollView, ImageBackground, Dimensions } from 'react-native'
 import { styled } from 'nativewind';
+import Modal from 'react-native-modal'
 import icons from '../../../../constants/icons'
 
 const StyledPressable = styled(Pressable)
@@ -37,8 +38,15 @@ const FeaturesModal: React.FC<FeaturesModalProps> = ({ visible, onClose, onSelec
     }
 
     return(
-        <Modal animationType='slide' transparent={true} visible={visible}>
-            <StyledView className='flex-1 bg-opacity-50 justify-end'>
+        <Modal isVisible={visible} 
+            style={styles.modal}
+            onBackdropPress={onClose} 
+            swipeDirection="down"
+            onSwipeComplete={onClose}
+            animationIn="slideInUp"
+            animationOut="slideOutDown"
+        >
+            <StyledView className='flex-1 justify-end' style={{backgroundColor: 'rgba(0, 0, 0, 0.5)',}}>
                 <StyledView className='h-5/6 w-full bg-white rounded-xl shadow-black shadow-xl overflow-hidden'>
                     <StyledScrollView style={{ width: screenWidth }}>
                         <StyledPressable onPress={() => handleDone()} className='flex w-full h-5 items-center'>
@@ -68,5 +76,12 @@ const FeaturesModal: React.FC<FeaturesModalProps> = ({ visible, onClose, onSelec
         </Modal>
     )
 }
+
+const styles = StyleSheet.create({
+    modal: {
+      justifyContent: 'flex-end',
+      margin: 0, // Ensures modal takes full width of the screen
+    },
+});
 
 export default FeaturesModal;

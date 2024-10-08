@@ -13,7 +13,7 @@ export default function Layout() {
         }} />
         <Stack.Screen name="sellerSignUp" options={{ 
             headerTitle: '',
-            headerShown: false
+            headerShown: false,
         }} />
     </Stack>
   );

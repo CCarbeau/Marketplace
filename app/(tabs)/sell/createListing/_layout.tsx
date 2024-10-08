@@ -5,11 +5,11 @@ export default function Layout() {
     <Stack>
         <Stack.Screen name="index" options={{ 
         headerTitle: '',
-        headerTransparent:true
+        headerShown:false,
         }} />
         <Stack.Screen name="category" options={{ 
         headerTitle: '',
-        headerTransparent:true
+        headerTransparent:true,
         }} />
     </Stack>
   );

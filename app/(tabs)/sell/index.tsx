@@ -21,7 +21,7 @@ const sell = () => {
   const router = useRouter();
 
   const [signedIn, setSignedIn] = useState(false);
-  const [isSeller, setIsSeller] = useState(false);
+  const [isSeller, setIsSeller] = useState(true);
 
   useEffect(() => {
     // Listen for changes in the user's auth state
@@ -33,6 +33,7 @@ const sell = () => {
         await AsyncStorage.setItem('userToken', idToken);
 
         setSignedIn(true); // Update the local state to reflect that the user is signed in
+        fetchUserProfile();
       } else {
         // No user is signed in
         setSignedIn(false); // Update the state to reflect that the user is not signed in
@@ -43,22 +44,18 @@ const sell = () => {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      const user = auth.currentUser;
+  const fetchUserProfile = async () => {
+    const user = auth.currentUser;
 
-      if (user) {
-        const userDoc = await getDoc(doc(db, 'userData', user.uid));
+    if (user) {
+      const userDoc = await getDoc(doc(db, 'userData', user.uid));
 
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setIsSeller(userData.seller); // Access seller status
-        }
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setIsSeller(userData.seller); // Access seller status
       }
-    };
-
-    fetchUserProfile();
-  }, []);
+    }
+  };
 
   if(!signedIn){
     return (

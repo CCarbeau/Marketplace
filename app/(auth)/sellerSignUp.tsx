@@ -51,26 +51,29 @@ const SellerSignUp = () => {
   }
 
   return (
-    <StyledView className='h-full w-full bg-white'>
-      <StyledView className='flex-1 overflow:hidden'>
-        {accountLink ? (
-          <WebView
-            source={{ uri: accountLink }}
-            style={ styles.webView }
-            onNavigationStateChange={(navState) => {
-              // Handle navigation to return_url after onboarding completion
-              if (navState.url === `${API_URL}/(tabs)/profile`) {
-                console.log('Onboarding completed');
-                updateAccount();
-                router.push('/(tabs)/profile');
-              }
-            }}
-          />
-        ) : (
-          <ActivityIndicator size="large" color="#FF5757" />
-        )}
+    <>
+      <StyledView className='h-12 w-full bg-white'/>
+      <StyledView className='h-full w-full bg-black'>
+        <StyledView className='flex-1 overflow:hidden'>
+          {accountLink ? (
+            <WebView
+              source={{ uri: accountLink }}
+              style={ styles.webView }
+              onNavigationStateChange={(navState) => {
+                // Handle navigation to return_url after onboarding completion
+                if (navState.url === `${API_URL}/(tabs)/profile`) {
+                  console.log('Onboarding completed');
+                  updateAccount();
+                  router.push('/(tabs)/profile');
+                }
+              }}
+            />
+          ) : (
+            <ActivityIndicator size="large" color="#FF5757" />
+          )}
+        </StyledView>
       </StyledView>
-    </StyledView>
+    </>
   );
 };
 
@@ -82,9 +85,6 @@ const styles = StyleSheet.create({
   },
   webView: {
     flex: 1,
-    marginTop: 48, 
-    backgroundColor: '#FFFFFF', // Ensure background is transparent
-    borderWidth: 0,
   },
 });
 

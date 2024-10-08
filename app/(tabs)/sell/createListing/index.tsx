@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { View, Pressable, Image, Alert, Animated, TextInput, Text, ScrollView, ImageBackground, Dimensions, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Router, useRouter } from 'expo-router';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { Href, Router, useRouter } from 'expo-router';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject, list } from 'firebase/storage';
 import { db, storage, auth } from '../../../../firebaseConfig';
 import { collection, addDoc } from "firebase/firestore"; 
 import { styled } from 'nativewind';
@@ -23,6 +23,8 @@ const StyledScrollView = styled(ScrollView)
 const StyledImageBackground = styled(ImageBackground)
 const StyledTextInput = styled(TextInput)
 
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
 const { width: screenWidth } = Dimensions.get('window');
 
 const CreateListing = () => {
@@ -33,7 +35,7 @@ const CreateListing = () => {
   const [brandModalVisible, setBrandModalVisible] = useState(false);
   const [featuresModalVisible, setFeaturesModalVisible] = useState(false);
   const [shippingModalVisible, setShippingModalVisible] = useState(false);
-  const [minimized, setMinimized] = useState(false);
+  
   const scrollViewRef = useRef<ScrollView>(null);
   const router = useRouter();
   const delay = (ms: any) => new Promise(resolve => setTimeout(resolve, ms));
@@ -64,6 +66,8 @@ const CreateListing = () => {
   const [weight, setWeight ] = useState('');
   const [shippingProfile, setShippingProfile] = useState('');
   const [cardsInLot, setCardsInLot] = useState('');
+
+  const [listingUrl, setListingUrl] = useState<Href<string>>('/');
   
   const [progress] = useState(new Animated.Value(0));
 
@@ -157,6 +161,11 @@ const CreateListing = () => {
       return;
     }
 
+    if (listingType === 'auction' && Number(quantity) > 1) {
+      Alert.alert("Auctions must have a quantity of 1");
+      return;
+    }
+
     if (shippingType === '') {
       Alert.alert("A shipping type is required");
       return;
@@ -183,7 +192,7 @@ const CreateListing = () => {
     }
   
     setUploading(true);
-    setMinimized(true);
+
     const downloadURLs: string[] = [];
     const uploadedImageRefs: any[] = [];
   
@@ -235,72 +244,116 @@ const CreateListing = () => {
           );
         });
       }
-  
-      // After all images are uploaded, save the listing data in Firestore
-      const newDocRef = collection(db, "listings");
-  
-      await addDoc(newDocRef, {
-        images: downloadURLs, // Save all download URLs
-        title: title,
-        description: description,
-        price: price,
-        quantity: quantity,
-        category: category,
-        ...(category.slice(-7)==='Singles' && genre==='Sports Cards'?{
-          ...(athlete && {athlete}),
-          ...(team && {team}),
-          ...(year && {year}),
-          ...(brand && {brand}),
-          ...(set && {set}),
-          ...(features && {features}),
-          ...(parallel && {parallel}),
-          ...(printRun && {printRun}),
+      
+      const includeIfDefined = (key: string, value: string) => (value !== undefined && value !== null ? { [key]: value } : {});
+    
 
-        }:{}),
-        ...(category.slice(-3)==='Lot' && genre==='Sports Cards'?{
-          ...(cardsInLot && {cardsInLot}),
-          ...(athlete?{athletes: athlete.split(',')}:{}),
-          ...(team?{teams: team.split(',')}:{}),
-          ...(year && {year}),
-          ...(brand && {brand}),
-          ...(set && {set}),
-          ...(features && {features})
-        }:{}),
-        ...(category.slice(-3)==='Wax' && genre==='Sports Cards'?{
-          ...(year && {year}),
-          ...(brand && {brand}),
-          ...(set && {set}),
-        }:{}),
-        ...(category.slice(-5)==='Break' && genre==='Sports Cards'?{
-          ...(athlete?{athletes: athlete.split(',')}:{}),
-          ...(team?{teams: team.split(',')}:{}),
-          ...(year && {year}),
-          ...(brand && {brand}),
-          ...(set && {set})
-        }:{}),
-        ...(genre === 'Sports Memorabilia'?{
-          ...(athlete && {athlete}),
-          ...(team && {team}),
-          ...(year && {year})
-        }:{}),
-        listingType: listingType,
-        ...(listingType === 'auction' ? {duration: duration} : {}),
-        offerable: offerable,
-        scheduled: scheduled,
-        ...(scheduled ? {date: date, time: time} : {}),
-        shippingType: shippingType,
-        ...(shippingType==='variable'?{weight:weight, shippingProfile: shippingProfile}: {shippingCost: shippingCost}),
+      const docData = {
+        downloadURLs,
+        title,
+        description,
+        price,
+        quantity,
+        category,
+        
+        // Condition for 'Singles' in 'Sports Cards'
+        ...(category.slice(-7) === 'Singles' && genre === 'Sports Cards' ? {
+          ...includeIfDefined('athlete', athlete),
+          ...includeIfDefined('team', team),
+          ...includeIfDefined('year', year),
+          ...includeIfDefined('brand', brand),
+          ...includeIfDefined('set', set),
+          ...(features && {features}),
+          ...includeIfDefined('parallel', parallel),
+          ...includeIfDefined('printRun', printRun),
+        } : {}),
+        
+        // Condition for 'Lot' in 'Sports Cards'
+        ...(category.slice(-3) === 'Lot' && genre === 'Sports Cards' ? {
+          ...includeIfDefined('cardsInLot', cardsInLot),
+          ...(athlete ? { athletes: athlete.split(',') } : {}),
+          ...(team ? { teams: team.split(',') } : {}),
+          ...includeIfDefined('year', year),
+          ...includeIfDefined('brand', brand),
+          ...includeIfDefined('set', set),
+          ...(features && {features}),
+        } : {}),
+        
+        // Condition for 'Wax' in 'Sports Cards'
+        ...(category.slice(-3) === 'Wax' && genre === 'Sports Cards' ? {
+          ...includeIfDefined('year', year),
+          ...includeIfDefined('brand', brand),
+          ...includeIfDefined('set', set),
+        } : {}),
+        
+        // Condition for 'Break' in 'Sports Cards'
+        ...(category.slice(-5) === 'Break' && genre === 'Sports Cards' ? {
+          ...(athlete ? { athletes: athlete.split(',') } : {}),
+          ...(team ? { teams: team.split(',') } : {}),
+          ...includeIfDefined('year', year),
+          ...includeIfDefined('brand', brand),
+          ...includeIfDefined('set', set),
+        } : {}),
+        
+        // Condition for 'Sports Memorabilia'
+        ...(genre === 'Sports Memorabilia' ? {
+          ...includeIfDefined('athlete', athlete),
+          ...includeIfDefined('team', team),
+          ...includeIfDefined('year', year),
+        } : {}),
+        
+        listingType,
+        ...(listingType === 'auction' ? { duration } : {}),
+        offerable,
+        scheduled,
+        ...(scheduled ? { date, time } : {}),
+        shippingType,
+        ...(shippingType === 'variable' ? { weight, shippingProfile } : { shippingCost }),
         likes: 0,
         ownerUID: auth.currentUser?.uid,
-      });
-      
-      await delay(1000);
+      };
+  
+      try{
 
-      setUploading(false);
-      setMinimized(false);
-      router.back();
+        const response = await fetch(`${API_URL}/add-listing`,{
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(docData),
+        
+        })
 
-    } catch (error) {
+        // Check if the backend returned an error
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Backend error:', errorData.error);
+          throw new Error(errorData.error || 'Failed to add listing.');
+        }
+
+        const data = await response.json();
+        setListingUrl(data.listingUrl);
+
+        
+        await delay(3000);
+
+      } catch (error) {
+        console.error('Error uploading images:', error);
+        Alert.alert('Error', 'Failed to upload images or create the listing.');
+
+        // If Firestore upload fails, delete the images from Firebase Storage
+        for (const storageRef of uploadedImageRefs) {
+          try {
+            await deleteObject(storageRef);
+            console.log('Deleted uploaded image from storage:', storageRef.fullPath);
+          } catch (deleteError) {
+            console.error('Failed to delete image from storage:', deleteError);
+          }
+        }
+
+        setUploading(false);
+      }
+    }catch (error) {
       console.error('Error uploading images:', error);
       Alert.alert('Error', 'Failed to upload images or create the listing.');
 
@@ -315,7 +368,6 @@ const CreateListing = () => {
       }
 
       setUploading(false);
-      setMinimized(false);
     }
   };  
 
@@ -338,7 +390,7 @@ const CreateListing = () => {
 
   return (
     <StyledView className='justify-center flex-1'>
-      <StyledView className={`${minimized ? 'bg-gray': 'bg-white'} flex-1 h-full w-full`}>
+      <StyledView className={'bg-white flex-1 h-full w-full'}>
         <StyledScrollView className='mt-16'>
           <StyledView className='h-96 mt-8'>
             <StyledScrollView className='flex-1 h-full' horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={handleImageScroll} scrollEventThrottle={16}>
@@ -408,7 +460,7 @@ const CreateListing = () => {
             <StyledText className='text-2xl font-bold text-black'>Details</StyledText>
             <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
               <StyledText className='text-lg'>Category: </StyledText>
-              <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setMinimized(true); setCategoryModalVisible(true);}}>
+              <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setCategoryModalVisible(true);}}>
                 {category==='' ? (
                   <StyledText className='text-lg text-gray text-center font-bold'>Select Category</StyledText>
                 ):(
@@ -458,7 +510,7 @@ const CreateListing = () => {
                 </StyledView>
                 <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
                   <StyledText className='text-lg'>Brand: </StyledText>
-                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setMinimized(true); setBrandModalVisible(true);}}>
+                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setBrandModalVisible(true);}}>
                     {brand==='' ? (
                       <StyledText className='text-lg text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
                     ):(
@@ -480,7 +532,7 @@ const CreateListing = () => {
                 </StyledView>
                 <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
                   <StyledText className='text-lg'>Features: </StyledText>
-                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setMinimized(true); setFeaturesModalVisible(true);}}>
+                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setFeaturesModalVisible(true);}}>
                     {features.length===0 ? (
                       <StyledText className='text-lg text-gray text-center font-bold shadow-sm'>Select Features</StyledText>
                     ):(
@@ -569,7 +621,7 @@ const CreateListing = () => {
                 </StyledView>
                 <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
                   <StyledText className='text-lg'>Brand: </StyledText>
-                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setMinimized(true); setBrandModalVisible(true);}}>
+                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setBrandModalVisible(true);}}>
                     {brand==='' ? (
                       <StyledText className='text-lg text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
                     ):(
@@ -591,7 +643,7 @@ const CreateListing = () => {
                 </StyledView>
                 <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
                   <StyledText className='text-lg'>Features: </StyledText>
-                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setMinimized(true); setFeaturesModalVisible(true);}}>
+                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setFeaturesModalVisible(true);}}>
                     {features.length===0 ? (
                       <StyledText className='text-lg text-gray text-center font-bold shadow-sm'>Select Features</StyledText>
                     ):(
@@ -606,7 +658,7 @@ const CreateListing = () => {
               <>
                 <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
                   <StyledText className='text-lg'>Brand: </StyledText>
-                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setMinimized(true); setBrandModalVisible(true);}}>
+                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setBrandModalVisible(true);}}>
                     {brand==='' ? (
                       <StyledText className='text-lg text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
                     ):(
@@ -670,7 +722,7 @@ const CreateListing = () => {
                 </StyledView>
                 <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
                   <StyledText className='text-lg'>Brand: </StyledText>
-                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setMinimized(true); setBrandModalVisible(true);}}>
+                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray' onPress={() => {setBrandModalVisible(true);}}>
                     {brand==='' ? (
                       <StyledText className='text-lg text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
                     ):(
@@ -867,7 +919,7 @@ const CreateListing = () => {
                 </StyledView>
                 <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
                   <StyledText className='text-lg'>Shipping Service:</StyledText>
-                  <StyledPressable className='border-2 border-gray rounded-lg w-1/2 active:bg-gray' onPress={() => {setMinimized(true); setShippingModalVisible(true);}}>
+                  <StyledPressable className='border-2 border-gray rounded-lg w-1/2 active:bg-gray' onPress={() => {setShippingModalVisible(true);}}>
                     {shippingProfile==='' ? (
                       <StyledText className='text-lg text-gray text-center font-bold'>Select Shipping</StyledText>
                     ):(
@@ -925,32 +977,33 @@ const CreateListing = () => {
           <StyledView className='w-full h-24'/>
 
           <CategoryModal visible={categoryModalVisible}
-            onClose={() => {setMinimized(false); setCategoryModalVisible(false);}}
+            onClose={() => {setCategoryModalVisible(false);}}
             onSelectCategory={(category: string, selectedGenre: string) => handleCategorySelect(category, selectedGenre)}
           />
 
           <BrandModal 
             visible={brandModalVisible}
-            onClose={() => {setMinimized(false); setBrandModalVisible(false);}}
+            onClose={() => {setBrandModalVisible(false);}}
             onSelectBrand={(brand: string) => handleBrandSelect(brand)}
           />
 
           <FeaturesModal
             visible={featuresModalVisible}
-            onClose={() => {setMinimized(false); setFeaturesModalVisible(false);}}
+            onClose={() => {setFeaturesModalVisible(false);}}
             onSelectFeatures={(features:string[]) => handleFeaturesSelect(features)}
           />
 
           <ShippingModal
             visible={shippingModalVisible}
-            onClose={() => {setMinimized(false); setShippingModalVisible(false);}} 
+            onClose={() => {setShippingModalVisible(false);}} 
             onSelectShipping={(shipping:string) => handleShippingSelect(shipping)}
           />
 
           <UploadingModal
             visible={uploading}
             progress={uploadProgress}
-            onClose={() => {setMinimized(false);}}
+            listingUrl={listingUrl}
+            onClose={() => {setUploading(false);}}
           />
 
         </StyledScrollView>

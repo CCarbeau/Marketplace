@@ -4,7 +4,7 @@ console.log("Home component is rendering");
 
 const Index = () => {
   return (
-    <Redirect href='/(auth)/sellerSignUp'></Redirect>
+    <Redirect href='/listing/EJAXpz3W4YDk6kFvSnFS'></Redirect>
   )
 }
 
