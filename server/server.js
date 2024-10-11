@@ -1,12 +1,13 @@
 // Import dependencies
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const Stripe = require('stripe');
-const stripe = Stripe('sk_test_51Q2AmbKoG2b0XRLYtU9AC8sQcdDOQLCAzjXxSVKIpXq81b46GteyJIukHvB1sLaJGI25JdenKhdH2yYTSUnkUPxO008uz6UoUc'); 
-const { getAuth, createUserWithEmailAndPassword } = require('firebase/auth'); // Use require for Firebase
-const { doc, setDoc, arrayUnion } = require('firebase/firestore'); // Use require for Firestore
-const { auth, db, storage } = require('../firebaseAdminConfig');
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import Stripe from 'stripe'; // Stripe SDK
+import { auth, db, storage } from '../firebaseAdminConfig.js';
+
+// Initialize Stripe with your secret key
+const stripe = new Stripe('sk_test_51Q2AmbKoG2b0XRLYtU9AC8sQcdDOQLCAzjXxSVKIpXq81b46GteyJIukHvB1sLaJGI25JdenKhdH2yYTSUnkUPxO008uz6UoUc');
+
 
 const API_URL = 'http://localhost:5000'
 
@@ -73,11 +74,16 @@ app.post('/register-user', async (req, res) => {
       offers: [],
       sales: [],
       following: [],
+      numberOfFollowing: 0,
       followers: [],
+      numberOfFollowers: 0,
       reviews: [],
       liked: [],
       recentSearches: [],
       balance: 0,
+      pfp: '',
+      rating: 0,
+      itemsSold: 0,
     };
 
     await setDoc(doc(db, 'userData', uid), userData);
@@ -150,9 +156,6 @@ app.post('/add-listing', async (req, res) => {
       ...(shippingType === 'variable' ? { weight: weight || 0, shippingProfile: shippingProfile || '' } : { shippingCost: shippingCost || 0 }),
       likes: 0,
       ownerUID: req.body.ownerUID, 
-      pfp: '',
-      rating: 0,
-      itemsSold: 0,
       createdAt: new Date(),
       random: Math.random(),
     };
@@ -205,6 +208,36 @@ app.post('/newSeller', async (req,res) => {
   } catch (error) {
     console.error('Error updating document:', error);
     res.status(500).send({ error: 'Failed to update account' });
+  }
+});
+
+app.get('/fetch-reviews', async (req, res) => {
+  try {
+    const { sellerId } = req.query;
+
+    if (!sellerId) {
+      return res.status(400).send({ error: 'sellerId is required' });
+    }
+
+    const reviewsRef = db.collection('reviews'); // Use Firestore from firebase-admin
+    const querySnapshot = await reviewsRef
+      .where('sellerId', '==', sellerId)
+      .orderBy('createdAt', 'desc')
+      .limit(10)
+      .get();
+
+    const reviews = querySnapshot.docs.map((doc) => {
+      const reviewData = doc.data();
+      return {
+        ...reviewData,
+        createdAt: reviewData.createdAt.toDate().toISOString(), // Convert Firestore Timestamp to ISO string
+      };
+    });
+
+    res.status(200).send({ message: 'Reviews retrieved successfully', reviews });
+  } catch (error) {
+    console.error('Error retrieving reviews:', error);
+    res.status(500).send({ error: 'Failed to retrieve reviews' });
   }
 });
 

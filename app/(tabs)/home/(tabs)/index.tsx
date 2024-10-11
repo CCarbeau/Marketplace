@@ -244,7 +244,7 @@ const Index = () => {
             style={{ flex: 1 }}
             >
               <StyledView className='absolute bottom-20 w-full'>
-                <StyledPressable onPress={() => {setModalVisible(true)}} className='w-full'>
+                <StyledPressable onPress={() => {setModalVisible(true)}} className='w-full rounded-2xl active:bg-lightGray active:opacity-50'>
                   <StyledImage source={icons.carrot} className='w-5 h-5 self-center'/>
                   <StyledText className='text-white text-2xl pl-4 pr-4 font-bold truncate mt-2' numberOfLines={1}>{item.title}</StyledText>
                   <StyledText className='pl-4 pr-4 text-white truncate' numberOfLines={1}>{item.description}</StyledText>
@@ -252,7 +252,7 @@ const Index = () => {
                 <StyledView className='flex-1 flex-row mb-2 justify-between pl-2 pr-2 gap-x-2'>
                   <StyledPressable 
                     className='flex-1 flex-row basis-2/3 mt-2 bg-primary active:bg-primaryDark rounded-2xl overflow-hidden justify-center items-center h-10' 
-                    onPressIn={handlePressIn}
+                    onPressIn={handlePressIn} 
                     onPressOut={handlePressOut}
                   >
                     <Animated.View
@@ -290,8 +290,8 @@ const Index = () => {
             swipeDirection="down" // Allows swipe-to-dismiss
             onSwipeComplete={() => {setModalVisible(!modalVisible)}}
           >
-            <StyledView className='flex absolute top-0 w-full items-center z-10'>
-                <StyledPressable onPress={() => {setModalVisible(false)}} className='flex w-5 h-5 items-center'>
+            <StyledView className='flex absolute top-0 items-center w-full h-8 z-10'>
+                <StyledPressable onPress={() => {setModalVisible(false)}} className='flex w-full h-10 active:bg-lightGray active:opacity-50 items-center' style={{borderTopLeftRadius:16, borderTopRightRadius: 16}}>
                     <StyledImage source={icons.carrot} className='w-5 h-5 mt-2' style={{ transform: [{ rotate: '180deg' }] }}></StyledImage>
                 </StyledPressable>
             </StyledView>

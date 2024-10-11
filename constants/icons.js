@@ -14,6 +14,8 @@ import x from '..//assets/icons/x.png'
 import check from '..//assets/icons/check.png'
 import eye from '..//assets/icons/eye.png'
 import eyePass from '..//assets/icons/eyePass.png'
+import follower from '..//assets/icons/follower.png'
+import star from '..//assets/icons/star.png'
 
 
 export default {
@@ -32,5 +34,7 @@ export default {
   x,
   check,
   eye,
-  eyePass
+  eyePass, 
+  follower,
+  star
 };

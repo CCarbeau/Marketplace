@@ -1,17 +1,13 @@
-const admin = require('firebase-admin');
+import admin from 'firebase-admin';
+import serviceAccount from './hobby-9f8d2-firebase-adminsdk-oqpe3-4ee733ca53.json' assert { type: 'json' };  // Import the JSON file
 
-// Initialize Firebase Admin SDK with service account credentials or default credentials
+// Initialize Firebase Admin SDK with service account credentials
 admin.initializeApp({
-  // credential: admin.credential.applicationDefault(),  // Use this if you are deploying to a Google Cloud environment
-  // Alternatively, you can use a service account key file:
-  credential: admin.credential.cert(require('./hobby-9f8d2-firebase-adminsdk-oqpe3-4ee733ca53.json')),
-  storageBucket: 'hobby-9f8d2.appspot.com',  // If you're using Firebase Storage
+  credential: admin.credential.cert(serviceAccount),
+  storageBucket: 'hobby-9f8d2.appspot.com',  // Firebase Storage Bucket URL
 });
 
-// Initialize Firestore, Auth, and Storage services
-const db = admin.firestore();
-const auth = admin.auth();
-const storage = admin.storage();
-
-// Export services for use in other parts of your app
-module.exports = { db, auth, storage };
+// Export Firestore, Auth, and Storage services for use in other files
+export const db = admin.firestore();
+export const auth = admin.auth();
+export const storage = admin.storage();
