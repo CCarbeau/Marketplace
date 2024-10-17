@@ -306,6 +306,7 @@ const CreateListing = () => {
         ...(listingType === 'auction' ? { duration } : {}),
         offerable,
         scheduled,
+        bids: 0,
         ...(scheduled ? { date, time } : {}),
         shippingType,
         ...(shippingType === 'variable' ? { weight, shippingProfile } : { shippingCost }),

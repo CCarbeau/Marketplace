@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Image, Pressable, ImageBackground, Animated, ScrollView, ActivityIndicator, TouchableHighlight, useWindowDimensions, Alert, FlatList } from 'react-native';
+import React, { useState, useEffect, useRef, memo } from 'react';
+import { View, Text, Image, Pressable, ImageBackground, Animated, ScrollView, ActivityIndicator, TouchableHighlight, useWindowDimensions, Alert, FlatList, LayoutRectangle } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { styled } from 'nativewind';
 import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db, storage } from '@/firebaseConfig'; // Import your storage instance
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import icons from '../../constants/icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const StyledPressable = styled(Pressable);
 const StyledImage = styled(Image);
@@ -20,8 +21,8 @@ interface Listing {
   description: string;
   price: number;
   quantity: number;
-  category: string;
-  genre: string;
+  category?: string;
+  genre?: string;
   athlete?: string;
   team?: string;
   year?: number;
@@ -34,19 +35,26 @@ interface Listing {
   athletes?: string[];
   teams?: string[];
   listingType: 'fixed' | 'auction';
+  bids?: number;
   duration?: string;
-  offerable: boolean;
-  scheduled: boolean;
+  offerable?: boolean;
+  scheduled?: boolean;
   date?: string;
   time?: string;
-  shippingType: 'flat' | 'variable';
+  shippingType?: 'flat' | 'variable';
   weight?: number;
   shippingProfile?: string;
   shippingCost?: number;
   likes: number;
-  ownerUID: string;
-  createdAt: Timestamp;
-  random: number;
+  ownerUID?: string;
+  createdAt?: RawTimestamp;
+  id: string;
+  random?: number;
+}
+
+interface RawTimestamp{
+    _seconds: string,
+    _nanoseconds: string,
 }
 
 interface ListingPageProps {
@@ -58,11 +66,13 @@ interface Details {
 }
 
 interface Review {
-    reviewerID: string;
-    sellerID: string;
+    reviewerId: string;
+    sellerId: string;
     rating: number;
     description: string;
     createdAt: string;
+    reviewerPfp: string;
+    reviewerUsername: string;
 }
 
 interface Seller {
@@ -72,6 +82,7 @@ interface Seller {
   numberOfFollowers: number;
   itemsSold: number;
   listings: string[];
+  id: string;
 }
 
 const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
@@ -80,6 +91,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
     const id = propId || (Array.isArray(params.id) ? params.id[0] : params.id);
     const [modal, setModal] = useState(false);
     const [listing, setListing] = useState<Listing | null>(null);
+    const [otherListings, setOtherListings] = useState<Listing []>([]);
     const [details, setDetails] = useState<Details>({});
     const [seller, setSeller] = useState<Seller | null>(null);
     const [loading, setLoading] = useState(true);
@@ -99,41 +111,47 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
     useEffect(() => {
         const fetchListing = async () => {
             try {
-                const docRef = doc(db, 'listings', id);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data() as Listing;
-                    setListing(data);
-                    if (propId) {
-                        setModal(true);
-                    }
-                    const includeIfDefined = (key: string, value: string | string[] | undefined | null) =>
-                        value !== undefined && value !== null ? { [key]: value } : {};
-
-                    setDetails({
-                        category: data.category,
-                        genre: data.genre,
-                        ...includeIfDefined('athlete', data.athlete),
-                        ...includeIfDefined('brand', data.brand),
-                        ...includeIfDefined('athletes', data.athletes),
-                        ...includeIfDefined('team', data.team),
-                        ...includeIfDefined('teams', data.teams),
-                        ...includeIfDefined('year', data.year !== undefined && data.year !== null ? data.year.toString() : undefined),
-                        ...includeIfDefined('set', data.set),
-                        ...includeIfDefined('features', data.features),
-                        ...includeIfDefined('parallel', data.parallel),
-                        ...includeIfDefined('printRun', data.printRun !== undefined && data.printRun !== null ? data.printRun.toString() : undefined),
-                    });
-
-                    if (data.listingType === 'auction' && data.createdAt) {
-                        const createdAtDate = data.createdAt.toDate(); // Convert Firestore Timestamp to Date
-                        startCountdown(createdAtDate, Number(data.duration));
-                    }
-                } else {
-                console.log('No such document!');
+                const response = await fetch(`${API_URL}/fetch-listings-by-id?id=${id}`, {
+                    method: 'GET',
+                });
+        
+                if (!response.ok) {
+                    throw new Error(`Error fetching other listings: ${response.status}`);
                 }
+        
+                const data = await response.json();
+                console.log(data);
+                const listing = data.listing as Listing
+
+                setListing(listing);
+                
+
+                if(propId){setModal(true);}
+
+                const includeIfDefined = (key: string, value: string | string[] | undefined | null) => (value !== undefined && value !== null ? { [key]: value } : {});
+    
+                setDetails({
+                    category: listing.category,
+                    genre: listing.genre,
+                    ...includeIfDefined('athlete', listing.athlete),
+                    ...includeIfDefined('brand', listing.brand),
+                    ...includeIfDefined('athletes', listing.athletes),
+                    ...includeIfDefined('team', listing.team),
+                    ...includeIfDefined('teams', listing.teams),
+                    ...includeIfDefined('year', listing.year !== undefined && listing.year !== null ? listing.year.toString() : undefined),
+                    ...includeIfDefined('set', listing.set),
+                    ...includeIfDefined('features', listing.features),
+                    ...includeIfDefined('parallel', listing.parallel),
+                    ...includeIfDefined('printRun', listing.printRun !== undefined && listing.printRun !== null ? listing.printRun.toString() : undefined),
+                });
+
+                if (listing.listingType === 'auction' && listing.createdAt) {
+                    const createdAtDate = convertToDate(listing.createdAt._seconds, listing.createdAt._nanoseconds) // Convert Firestore Timestamp to Date
+                    startCountdown(createdAtDate, Number(listing.duration));
+                }
+
             } catch (error) {
-                console.error('Error fetching document:', error);
+                console.error('Cannot fetch reviews:', error);
             } finally {
                 setLoading(false);
             }
@@ -154,16 +172,23 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
         return () => unsubscribe();
     }, []);
 
+    // MOVE TO BACKEND AND ADD SELLER ID TERM
     useEffect(() => {
         const fetchSeller = async () => {
             if (listing){
-                try {
-                    const docRef = doc(db, 'userData', listing.ownerUID)
-                    const docSnap = await getDoc(docRef); 
-        
-                    setSeller(docSnap.data() as Seller);
-                }catch{
-                    console.error('Cannot fetch seller')
+                try{    
+                    const response = await fetch(`${API_URL}/fetch-seller?id=${listing.ownerUID}`, {
+                        method: 'GET',
+                    });
+    
+                    if (!response.ok) {
+                        throw new Error(`Error fetching seller: ${response.status}`);
+                    }
+    
+                    const data = await response.json();
+                    setSeller(data.seller)
+                }catch(error){
+                    console.log('Cannont fetch seller', error)
                 }
             }
         }
@@ -184,7 +209,6 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
               }
     
               const data = await response.json();
-              console.log(data);
               setReviews(data.reviews || []); // Set the reviews state with the fetched data
             } catch (error) {
               console.error('Cannot fetch reviews:', error);
@@ -196,6 +220,44 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
     
         fetchReviews();
       }, [listing]);
+
+      useEffect(() => {
+        const fetchOtherListings = async () => {
+            if (listing && listing.ownerUID) {
+                try {
+                  const response = await fetch(`${API_URL}/fetch-listings-by-owner?numListings=10&sellerId=${listing.ownerUID}&listingId=${id}`, {
+                    method: 'GET',
+                  });
+        
+                  if (!response.ok) {
+                    throw new Error(`Error fetching other listings: ${response.status}`);
+                  }
+        
+                  const data = await response.json();
+                 
+                  setOtherListings(data.listings || []); 
+                } catch (error) {
+                  console.error('Cannot fetch other listings:', error);
+                } finally {
+                  setLoading(false); // Stop the loading state whether successful or not
+                }
+              }
+        }
+
+        if (otherListings.length === 0){
+            fetchOtherListings();
+        }
+      },[listing, otherListings])
+
+    const convertToDate = (seconds: string, nanoseconds: string) => {
+        // Convert raw timestamp to milliseconds
+        const milliseconds = Number(seconds) * 1000 + Number(nanoseconds) / 1000000;
+
+        // Create a JavaScript Date object
+        const date = new Date(milliseconds);
+
+        return date;
+    }
     
 
     const handleLike = async (docId: string, currentLikes: number) => {
@@ -221,16 +283,16 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
         }
     };
 
-    const handleComment = () => {
-        // Handle comment logic
+    const handleMessage = () => {
+       Alert.alert('Message initiated')
     };
 
-    const handleProfile = () => {
-        // Handle profile logic
+    const handleProfile = (id: string) => {
+        Alert.alert('Profle initiated')
     };
 
     const handleFollow = () => {
-        // Handle follow logic
+        Alert.alert('Follow initiated')
     };
 
     const handlePurchase = () => {
@@ -247,32 +309,32 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
         const endTime = new Date(createdAt.getTime() + duration * 24 * 60 * 60 * 1000); 
 
         const updateCountdown = () => {
-        const now = new Date();
-        const timeDiff = endTime.getTime() - now.getTime();
+            const now = new Date();
+            const timeDiff = endTime.getTime() - now.getTime();
 
-        if (timeDiff <= 0) {
-            setTimeRemaining("Auction Ended");
-            clearInterval(intervalId); // Clear the interval when the auction ends
-            return;
-        }
+            if (timeDiff <= 0) {
+                setTimeRemaining("Auction Ended");
+                clearInterval(intervalId); // Clear the interval when the auction ends
+                return;
+            }
 
-        // Calculate remaining time
-        const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+            // Calculate remaining time
+            const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
 
-        if (days>1){
-            setTimeRemaining(`${days} Days`);
-        }else if(days===1){
-            setTimeRemaining(`${days} Day ${hours}h`)
-        }else if(hours > 0){
-            setTimeRemaining(`${hours}h ${minutes}m`)
-        }else if(minutes>0){
-            setTimeRemaining(`${minutes}m ${seconds}s`)
-        }else{
-            setTimeRemaining(`${seconds}s`)
-        }
+            if (days>1){
+                setTimeRemaining(`${days} Days`);
+            }else if(days===1){
+                setTimeRemaining(`${days} Day ${hours}h`)
+            }else if(hours > 0){
+                setTimeRemaining(`${hours}h ${minutes}m`)
+            }else if(minutes>0){
+                setTimeRemaining(`${minutes}m ${seconds}s`)
+            }else{
+                setTimeRemaining(`${seconds}s`)
+            }
         };
 
         // Run every second
@@ -283,6 +345,35 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
 
         // Cleanup the interval when the component unmounts
         return () => clearInterval(intervalId);
+    };
+
+    const calcTimeRemaining = (createdAt: Date, duration: number) => {
+        const endTime = new Date(createdAt.getTime() + duration * 24 * 60 * 60 * 1000); 
+
+        const now = new Date();
+        const timeDiff = endTime.getTime() - now.getTime();
+
+        if (timeDiff <= 0) {
+            return ('Ended');
+        }
+
+        // Calculate remaining time
+        const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+        if (days>1){
+            return(`${days} Days`);
+        }else if(days===1){
+            return(`${days} Day ${hours}h`)
+        }else if(hours > 0){
+            return(`${hours}h ${minutes}m`)
+        }else if(minutes>0){
+            return(`${minutes}m ${seconds}s`)
+        }else{
+            return(`${seconds}s`)
+        }
     };
 
     const DetailsTab = () => (
@@ -307,51 +398,101 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
 
     const RenderReviews = () => (
         reviews && seller ? (
-            reviews.map((review, index)=>(
-                <StyledView className='border-2 border-darkGray rounded-2xl p-2' key={index}>
-                    <StyledPressable className='flex-row items-center justify-between gap-x-8'>
-                        <StyledView className='flex-row items-center'>
-                            {seller.pfp ? (
-                                <StyledImage source={{ uri: seller.pfp }} className="w-10 h-10 rounded-full" />
-                            ):(
-                                <StyledImage source={icons.profile} className="w-10 h-10" />
-                            )}
-                            <StyledView className='ml-1'>
-                                <StyledText className='text-lg'>{seller.username}</StyledText>
-                                <StyledText className='text-xs mb-1'>{new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}</StyledText>
+            reviews.map((review, index) => (
+                <StyledView className='border-2 border-darkGray rounded-2xl p-1 mr-2' key={index} style={{width: layout.width*5/9}}>
+                    <StyledPressable className='active:bg-gray rounded-xl' onPress={() => {handleProfile(review.reviewerId)}}>
+                        <StyledView className='flex-row items-center justify-between p-1'>
+                            <StyledView className='flex-row items-center'>
+                                {seller.pfp ? (
+                                    <StyledImage source={{ uri: seller.pfp }} className="w-10 h-10 rounded-full" />
+                                ):(
+                                    <StyledImage source={icons.profile} className="w-10 h-10" />
+                                )}
+                                <StyledView className='ml-1'>
+                                    <StyledText className='text-lg'>{seller.username}</StyledText>
+                                    <StyledText className='text-xs mb-1'>{new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}</StyledText>
+                                </StyledView>
+                            </StyledView>
+                            <StyledView className='flex-row items-center'>
+                                <StyledText className='text-lg'>{review.rating}</StyledText>
+                                <StyledImage source={icons.star} style={{tintColor:'#FF5757'}} className='ml-1 w-5 h-5'/>
                             </StyledView>
                         </StyledView>
-                        <StyledView className='flex-row items-center'>
-                            <StyledText className='text-lg'>{review.rating}</StyledText>
-                            <StyledImage source={icons.star} style={{tintColor:'#FF5757'}} className='ml-1 w-5 h-5'/>
-                        </StyledView>
                     </StyledPressable>
-                    <StyledText className='mt-2 text-wrap'>{review.description}</StyledText>
+                    <StyledView className='w-full mr-1 ml-1'>
+                        <StyledText numberOfLines={4}>{review.description}</StyledText>
+                    </StyledView>
                 </StyledView>
+                
             ))
         ):(
             <StyledText>Reviews not found</StyledText>
         )
     );
 
-    const SellerTab = () => (
+    
+    const RenderOtherListings= memo((() => (
+        otherListings && seller ? (
+            otherListings.map((listing: Listing, index: number)=>(
+                <StyledPressable  key={listing.id} className='flex' onPress={() => {router.push(`/listing/${listing.id}`)}}>
+                    <StyledView className='rounded-2xl p-1 mr-2' style={{width: layout.width/2}}>
+                        <StyledView className='self-center'>
+                            {listing.images ? (
+                                <StyledImage source={{ uri: listing.images[0] }} style={{ width: layout.width/2, height: layout.height/4 }}className="rounded-xl" />
+                            ):(
+                                <StyledImage source={icons.profile} style={{ width: layout.width/2, height: layout.height/4 }}className="rounded-xl" />
+                            )}
+                        </StyledView>
+                        <StyledView className='mt-2'>
+                            <StyledText className='font-bold text-xl' numberOfLines={2}>{listing.title}</StyledText>
+                            <StyledText className='text-darkGray' numberOfLines={2}>{listing.description}</StyledText>
+                            <StyledText className='text-lg font-bold mt-1'>${listing.price}</StyledText>
+                            {listing.listingType === 'auction' && listing.createdAt ? (
+                                <StyledView className='flex-row items-center'>
+                                    {listing.bids === 1 ?(
+                                        <StyledText className='text-md text-darkGray'>{listing.bids} Bid • </StyledText>
+                                    ):(
+                                        <StyledText className='text-md text-darkGray'>{listing.bids} Bids • </StyledText>
+                                    )}
+                                    <StyledText className='font-bold text-primary text-md'>{calcTimeRemaining(convertToDate(listing.createdAt._seconds, listing.createdAt._nanoseconds), Number(listing.duration))}</StyledText>
+                                </StyledView>
+                            ):(
+                                <StyledText className='text-md text-darkGray'>Qty: {listing.quantity}</StyledText>
+                            )}
+                        </StyledView>
+                    </StyledView>
+                </StyledPressable>
+            ))
+        ):(
+            <StyledText>No other listings found</StyledText>
+        )
+    )));
+
+    const SellerTab = memo((() => (
         seller ? (
-            <StyledView className='ml-2 mr-2 mt-2'>
+            <StyledView className='ml-2 mr-2 mt-4'>
                 <StyledView className="flex-auto flex-row h-20">
+                    <StyledPressable onPress={() => {handleProfile(seller.id)}}>
                     {seller.pfp ? (
                         <StyledImage source={{ uri: seller.pfp }} className="w-20 h-20 rounded-full" />
                     ):(
                         <StyledImage source={icons.profile} className="w-20 h-20" />
                     )}
+                    </StyledPressable>
                     <StyledView className='flex-auto ml-2 mt-1 w-full'>
                         <StyledView className='flex-row justify-between'>
                             <StyledView>
                                 <StyledText className="text-2xl font-bold">{seller.username}</StyledText>
                                 <StyledText className='text-md'>Seller since 2024</StyledText>
                             </StyledView>
-                            <StyledPressable className='justify-center items-center bg-black active:bg-gray rounded-2xl mr-2 h-10 w-10'>
+                            <StyledView className='flex-row'>
+                            <StyledPressable className='justify-center items-center bg-black active:bg-gray rounded-2xl mr-2 h-10 w-10' onPress={handleFollow}>
+                                <StyledImage source={icons.profile} style={{tintColor: '#FFFFFF'}} className='w-7 h-7'/>
+                            </StyledPressable>
+                            <StyledPressable className='justify-center items-center bg-black active:bg-gray rounded-2xl mr-2 h-10 w-10' onPress={handleMessage}>
                                 <StyledImage source={icons.message} className='h-7 w-7'/>
                             </StyledPressable>
+                            </StyledView>
                         </StyledView>
                         <StyledView className='flex-row w-3/5 justify-between'>
                             <StyledView className='flex-row items-center'>
@@ -371,14 +512,29 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                 </StyledView>
                 <StyledView className='mt-4 h-0.5 rounded-xl bg-gray' />
                 <StyledView>
-                    <StyledText className='ml-2 text-xl font-bold mt-4'>Seller Reviews</StyledText>
+                    <StyledText className='ml-2 text-xl font-bold mt-4'>Reviews</StyledText>
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         scrollEventThrottle={16}
                         style={{marginTop:8}}
+                        pagingEnabled
                     >
                         <RenderReviews />
+                        
+                    </ScrollView>
+                </StyledView>
+                <StyledView>
+                    <StyledText className='ml-2 text-xl font-bold mt-4'>More from this Seller</StyledText>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        scrollEventThrottle={16}
+                        style={{marginTop:8}}
+                        removeClippedSubviews={false}
+                    >
+                        <RenderOtherListings />
+                        
                     </ScrollView>
                 </StyledView>
             </StyledView>
@@ -388,18 +544,20 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                 <StyledText className="text-xl">Seller cannot be found</StyledText>
             </StyledView>
         )
-    );
+    )));
 
     const handleTabPress = (index: number) => {
-        setActiveTab(index);
+        if(index !== activeTab){
+            setActiveTab(index);
 
-        Animated.spring(animatedValue, {
-        toValue: index * layout.width,
-        useNativeDriver: true,
-        }).start();
-
-        if (scrollViewRef.current) {
-        scrollViewRef.current.scrollTo({ x: index * layout.width, animated: true });
+            Animated.spring(animatedValue, {
+                toValue: index * layout.width,
+                useNativeDriver: true,
+            }).start();
+    
+            if (scrollViewRef.current) {
+                scrollViewRef.current.scrollTo({ x: index * layout.width, animated: true });
+            }
         }
     };
 
@@ -408,9 +566,9 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
         animatedValue.setValue(scrollX / 2); // Update animated value for the indicator
 
         const index = scrollX/(layout.width-16)
-        setActiveTab(index);
+        setActiveTab(Math.round(index));
 
-        var toHeight = 100 + (index) * 300
+        var toHeight = 100 + 610
         
 
         Animated.timing(tabHeights, {
@@ -531,7 +689,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                                     showsHorizontalScrollIndicator={false}
                                     onScroll={onScroll}
                                     scrollEventThrottle={16}
-                                    nestedScrollEnabled
+                                    nestedScrollEnabled={true}
                                     >
                                     {/* Tab Content */}
                                     <View style={{ width: layout.width - 16 }}>
@@ -549,9 +707,15 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                         </StyledView>
                     </TouchableHighlight> 
                 ):(
+                // NON MODAL VIEW 
                     <StyledView className="bg-white rounded-2xl">
-                        <StyledImageBackground source={{ uri: listing.images[0] }} className='h-[448]' imageStyle={{ ...(modal ? { borderTopRightRadius: 16, borderTopLeftRadius: 16 } : {}) }}>
-                            <StyledPressable onPress={() => { handleLike(id, listing.likes) }} className='flex-row absolute bg-black right-4 bottom-2 rounded-full'>
+                        <StyledImageBackground source={{ uri: listing.images[0] }} className='h-[496]' imageStyle={{ ...(modal ? { borderTopRightRadius: 16, borderTopLeftRadius: 16 } : {}) }}>
+                            <SafeAreaView>
+                                <StyledPressable className='ml-4 bg-darkGray active:bg-gray rounded-full w-8 h-8 justify-center' onPress={() => {router.back()}}>
+                                    <StyledImage source={icons.carrot} style={{transform: [{ rotate: '270deg' }]}} className='ml-1 w-5 h-5'/>
+                                </StyledPressable>
+                            </SafeAreaView>
+                            <StyledPressable onPress={() => { handleLike(id, listing.likes) }} className='flex-row absolute bg-darkGray right-4 bottom-2 rounded-full'>
                                 <StyledText className='text-white pl-2 text-xl font-bold self-center'>{listing.likes}</StyledText>
                                 {!isLiked ? (
                                     <StyledImage source={icons.heartEmpty} className='w-6 h-6 m-2' />
@@ -622,19 +786,18 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                                 scrollEventThrottle={16}
                                 nestedScrollEnabled
                                 >
-                                    {/* Tab Content */}
-                                    <View style={{ width: layout.width - 16 }}>
+                                    <StyledView style={{ width: layout.width - 16 }}>
                                         {/* Details Tab Content */}
                                         <DetailsTab />
-                                    </View>
-                                    <View style={{ width: layout.width - 16 }}>
+                                    </StyledView>
+                                    <StyledView style={{ width: layout.width - 16 }}>
                                         {/* Seller Tab Content */}
                                         <SellerTab />
-                                    </View>
+                                    </StyledView>
                                 </ScrollView>
                             </Animated.View>
                         </StyledView>
-                        <StyledView className="w-full bg-white mt-2 h-64" />
+                        <StyledView className="w-full bg-white mt-2 h-32" />
                     </StyledView>
                 )} 
             </ScrollView>

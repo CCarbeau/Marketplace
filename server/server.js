@@ -226,13 +226,22 @@ app.get('/fetch-reviews', async (req, res) => {
       .limit(10)
       .get();
 
-    const reviews = querySnapshot.docs.map((doc) => {
+    const reviews = await Promise.all(querySnapshot.docs.map(async (doc) => {
       const reviewData = doc.data();
+      const reviewerId = reviewData.reviewerId;
+
+      // Fetch the reviewer's profile picture and username from the users collection
+      const userDoc = await db.collection('userData').doc(reviewerId).get();
+      const userData = userDoc.exists ? userDoc.data() : { pfp: null, username: 'Unknown' };
+
+      // Combine review data with reviewer information
       return {
         ...reviewData,
         createdAt: reviewData.createdAt.toDate().toISOString(), // Convert Firestore Timestamp to ISO string
+        reviewerPfp: userData.pfp,
+        revieverUsername: userData.username,
       };
-    });
+    }));
 
     res.status(200).send({ message: 'Reviews retrieved successfully', reviews });
   } catch (error) {
@@ -240,6 +249,99 @@ app.get('/fetch-reviews', async (req, res) => {
     res.status(500).send({ error: 'Failed to retrieve reviews' });
   }
 });
+
+app.get('/fetch-listings-by-id', async (req, res) => {
+  try {
+    const { id } = req.query;
+
+    if (!id) {
+      return res.status(400).send({ error: 'Listing Id is required' });
+    }
+    const docRef = db.collection('listings').doc(id);
+    const docSnap = await docRef.get()
+    const listing = docSnap.data();
+
+    res.status(200).send({ message: 'Listing retrieved successfully', listing });
+  } catch (error) {
+    console.error('Error retrieving listing:', error);
+    res.status(500).send({ error: 'Failed to retrieve listing' });
+  }
+});
+
+app.get('/fetch-listings-by-owner', async (req, res) => {
+  try {
+    const { numListings, sellerId, listingId } = req.query;
+
+    if (!sellerId) {
+      return res.status(400).send({ error: 'sellerId is required' });
+    }
+    const otherListingsRef = db.collection('listings'); // Use Firestore from firebase-admin
+    const querySnapshot = await otherListingsRef
+      .where('ownerUID', '==', sellerId)
+      .orderBy('random', 'desc')
+      .limit(parseInt(numListings, 10))
+      .get();
+
+    const listings = querySnapshot.docs
+    .filter((doc) => doc.id !== listingId)
+    .map((doc) => {
+      const listing = doc.data()
+      const listingData = {
+        id: doc.id,
+        images: [listing.images[0]],
+        title: listing.title,
+        description: listing.description,
+        price: listing.price,
+        quantity: listing.quantity,
+        listingType: listing.listingType,
+        likes: listing.likes,
+        createdAt: listing.createdAt,
+        bids: listing.bids,
+        duration: listing.duration,
+      }
+      
+      return (listingData);
+    });
+
+    res.status(200).send({ message: 'Other Listings retrieved successfully', listings });
+  } catch (error) {
+    console.error('Error retrieving other listings:', error);
+    res.status(500).send({ error: 'Failed to retrieve other listings' });
+  }
+});
+
+app.get('/fetch-seller', async (req, res) => {
+  try{
+    const { id } = req.query; 
+
+    if (!id){
+      return res.status(400).send({error: 'No id provided'});
+    }
+
+    const docRef = db.doc(`userData/${id}`); 
+    const docSnap = await docRef.get();
+
+    if (!docSnap.exists) {
+      return res.status(404).send({ error: 'Seller not found' });
+    }
+
+    const user = docSnap.data()
+    const seller = {
+      username: user?.username || 'Unknown',
+      pfp: user?.pfp || null,
+      rating: user?.rating || 0,
+      numberOfFollowers: user?.numberOfFollowers || 0,
+      itemsSold: user?.itemsSold || 0,
+      listings: user?.listings || [],
+      id: id,
+    };
+
+    res.status(200).send({message: 'Seller retrieved successfully', seller})
+  }catch (error){
+    console.error('Error fetching user', error);
+    res.status(500).send({error: 'Failed to retrieve user'})
+  }
+})
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
