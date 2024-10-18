@@ -310,6 +310,48 @@ app.get('/fetch-listings-by-owner', async (req, res) => {
   }
 });
 
+app.get('/fetch-listings-by-category', async (req, res) => {
+  try {
+    const { numListings, category, listingId } = req.query;
+
+    if (!category) {
+      return res.status(400).send({ error: 'category is required' });
+    }
+    const relatedListingsRef = db.collection('listings'); // Use Firestore from firebase-admin
+    const querySnapshot = await relatedListingsRef
+      .where('category', '==', category)
+      .orderBy('random', 'desc')
+      .limit(parseInt(numListings, 10))
+      .get();
+
+    const listings = querySnapshot.docs
+    .filter((doc) => doc.id !== listingId)
+    .map((doc) => {
+      const listing = doc.data()
+      const listingData = {
+        id: doc.id,
+        images: [listing.images[0]],
+        title: listing.title,
+        description: listing.description,
+        price: listing.price,
+        quantity: listing.quantity,
+        listingType: listing.listingType,
+        likes: listing.likes,
+        createdAt: listing.createdAt,
+        bids: listing.bids,
+        duration: listing.duration,
+      }
+      
+      return (listingData);
+    });
+
+    res.status(200).send({ message: 'Related Listings retrieved successfully', listings });
+  } catch (error) {
+    console.error('Error retrieving related listings:', error);
+    res.status(500).send({ error: 'Failed to retrieve related listings' });
+  }
+});
+
 app.get('/fetch-seller', async (req, res) => {
   try{
     const { id } = req.query; 

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, memo } from 'react';
-import { View, Text, Image, Pressable, ImageBackground, Animated, ScrollView, ActivityIndicator, TouchableHighlight, useWindowDimensions, Alert, FlatList, LayoutRectangle } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, Image, Pressable, ImageBackground, Animated, ScrollView, ActivityIndicator, TouchableHighlight, useWindowDimensions, Alert, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { styled } from 'nativewind';
 import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
@@ -7,13 +7,14 @@ import { db, storage } from '@/firebaseConfig'; // Import your storage instance
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import icons from '../../constants/icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import SellerTab from './sellerTab';
+import RenderRelatedListings from './relatedListings';
 
 const StyledPressable = styled(Pressable);
 const StyledImage = styled(Image);
 const StyledView = styled(View);
 const StyledText = styled(Text);
 const StyledImageBackground = styled(ImageBackground);
-const StyledScrollView = styled(ScrollView);
 
 interface Listing {
   images: string[];
@@ -22,7 +23,6 @@ interface Listing {
   price: number;
   quantity: number;
   category?: string;
-  genre?: string;
   athlete?: string;
   team?: string;
   year?: number;
@@ -101,7 +101,8 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
     const scrollViewRef = useRef<ScrollView | null>(null);
     const [tabHeights, setTabHeights] = useState(new Animated.Value(100));
     const [reviews, setReviews] = useState<Review []>([]);
-
+    const [refreshing, setRefreshing] = React.useState(false);
+   
     const router = useRouter();
     const [isLiked, setIsLiked] = useState(false);
     const [listings, setListings] = useState<Listing[]>([]);
@@ -111,6 +112,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
     useEffect(() => {
         const fetchListing = async () => {
             try {
+                setLoading(true);
                 const response = await fetch(`${API_URL}/fetch-listings-by-id?id=${id}`, {
                     method: 'GET',
                 });
@@ -132,7 +134,6 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
     
                 setDetails({
                     category: listing.category,
-                    genre: listing.genre,
                     ...includeIfDefined('athlete', listing.athlete),
                     ...includeIfDefined('brand', listing.brand),
                     ...includeIfDefined('athletes', listing.athletes),
@@ -158,25 +159,26 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
         };
 
         fetchListing();
-    }, [id]);
+    }, [id, refreshing]);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
-        if (user) {
-            setSignedIn(true);
-        } else {
-            setSignedIn(false);
-        }
+            if (user) {
+                setSignedIn(true);
+            } else {
+                setSignedIn(false);
+            }
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [refreshing]);
 
     // MOVE TO BACKEND AND ADD SELLER ID TERM
     useEffect(() => {
         const fetchSeller = async () => {
             if (listing){
-                try{    
+                try{
+                    setLoading(true);
                     const response = await fetch(`${API_URL}/fetch-seller?id=${listing.ownerUID}`, {
                         method: 'GET',
                     });
@@ -189,65 +191,116 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                     setSeller(data.seller)
                 }catch(error){
                     console.log('Cannont fetch seller', error)
+                }finally{
+                    setLoading(false);
                 }
             }
         }
         
         fetchSeller();
-    },[listing]) 
+    },[listing, refreshing]) 
     
     useEffect(() => {
         const fetchReviews = async () => {
           if (listing && listing.ownerUID) {
             try {
-              const response = await fetch(`${API_URL}/fetch-reviews?sellerId=${listing.ownerUID}`, {
-                method: 'GET',
-              });
-    
-              if (!response.ok) {
-                throw new Error(`Error fetching reviews: ${response.status}`);
-              }
-    
-              const data = await response.json();
-              setReviews(data.reviews || []); // Set the reviews state with the fetched data
+                setLoading(true);
+                const response = await fetch(`${API_URL}/fetch-reviews?sellerId=${listing.ownerUID}`, {
+                    method: 'GET',
+                });
+        
+                if (!response.ok) {
+                    throw new Error(`Error fetching reviews: ${response.status}`);
+                }
+        
+                const data = await response.json();
+                setReviews(data.reviews || []); // Set the reviews state with the fetched data
             } catch (error) {
-              console.error('Cannot fetch reviews:', error);
+                console.error('Cannot fetch reviews:', error);
             } finally {
-              setLoading(false); // Stop the loading state whether successful or not
+                setLoading(false); // Stop the loading state whether successful or not
             }
           }
         };
     
         fetchReviews();
-      }, [listing]);
+      }, [listing, refreshing]);
 
-      useEffect(() => {
-        const fetchOtherListings = async () => {
-            if (listing && listing.ownerUID) {
-                try {
-                  const response = await fetch(`${API_URL}/fetch-listings-by-owner?numListings=10&sellerId=${listing.ownerUID}&listingId=${id}`, {
-                    method: 'GET',
-                  });
-        
-                  if (!response.ok) {
-                    throw new Error(`Error fetching other listings: ${response.status}`);
-                  }
-        
-                  const data = await response.json();
-                 
-                  setOtherListings(data.listings || []); 
-                } catch (error) {
-                  console.error('Cannot fetch other listings:', error);
-                } finally {
-                  setLoading(false); // Stop the loading state whether successful or not
+    useEffect(() => {
+    const fetchOtherListings = async () => {
+        if (listing && listing.ownerUID) {
+            try {
+                setLoading(true);
+                const response = await fetch(`${API_URL}/fetch-listings-by-owner?numListings=10&sellerId=${listing.ownerUID}&listingId=${id}`, {
+                method: 'GET',
+                });
+    
+                if (!response.ok) {
+                throw new Error(`Error fetching other listings: ${response.status}`);
                 }
-              }
+    
+                const data = await response.json();
+                
+                setOtherListings(data.listings || []); 
+            } catch (error) {
+                console.error('Cannot fetch other listings:', error);
+            } finally {
+                setLoading(false); // Stop the loading state whether successful or not
+            }
+        }
+    }
+
+    if (otherListings.length === 0){
+        fetchOtherListings();
+    }
+    },[listing, otherListings, refreshing])
+
+    const [relatedListings, setRelatedListings] = useState<Listing[]>([]);
+
+    useEffect(()=> {
+        const fetchRelatedListings = async () => {
+            if (listing) {
+                try {
+                    setLoading(true);
+                    const response = await fetch(`${API_URL}/fetch-listings-by-category?numListings=10&category=${listing.category}&listingId=${id}`, {
+                        method: 'GET',
+                    });
+        
+                    if (!response.ok) {
+                        throw new Error(`Error fetching related listings: ${response.status}`);
+                    }
+        
+                    const data = await response.json();
+                    
+                    setRelatedListings(data.listings || []); 
+                } catch (error) {
+                    console.error('Cannot fetch related listings:', error);
+                } finally {
+                    setLoading(false); // Stop the loading state whether successful or not
+                }
+            }
         }
 
-        if (otherListings.length === 0){
-            fetchOtherListings();
+        if (relatedListings.length === 0 ){
+            fetchRelatedListings()
         }
-      },[listing, otherListings])
+    },[listing, relatedListings, refreshing])
+
+    useEffect(() => {
+        if(details){
+            setTabHeights(new Animated.Value(Object.keys(details).length*50))
+        }
+    },[details, refreshing])
+
+    const onRefresh = React.useCallback(() => {
+        setRefreshing(true);
+        setLoading(true);
+
+        setTimeout(() => {
+          setRefreshing(false);
+        }, 2000);
+      }, []);
+
 
     const convertToDate = (seconds: string, nanoseconds: string) => {
         // Convert raw timestamp to milliseconds
@@ -279,7 +332,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                 console.error("Error updating likes:", error);
             }
         } else {
-        router.push('/(auth)/')
+            router.push('/(auth)/')
         }
     };
 
@@ -300,6 +353,10 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
     }
 
     const handleOffer = () => {
+
+    }
+
+    const handleCustomBid = () => {
 
     }
 
@@ -396,156 +453,6 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
         </StyledView>
     );
 
-    const RenderReviews = () => (
-        reviews && seller ? (
-            reviews.map((review, index) => (
-                <StyledView className='border-2 border-darkGray rounded-2xl p-1 mr-2' key={index} style={{width: layout.width*5/9}}>
-                    <StyledPressable className='active:bg-gray rounded-xl' onPress={() => {handleProfile(review.reviewerId)}}>
-                        <StyledView className='flex-row items-center justify-between p-1'>
-                            <StyledView className='flex-row items-center'>
-                                {seller.pfp ? (
-                                    <StyledImage source={{ uri: seller.pfp }} className="w-10 h-10 rounded-full" />
-                                ):(
-                                    <StyledImage source={icons.profile} className="w-10 h-10" />
-                                )}
-                                <StyledView className='ml-1'>
-                                    <StyledText className='text-lg'>{seller.username}</StyledText>
-                                    <StyledText className='text-xs mb-1'>{new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}</StyledText>
-                                </StyledView>
-                            </StyledView>
-                            <StyledView className='flex-row items-center'>
-                                <StyledText className='text-lg'>{review.rating}</StyledText>
-                                <StyledImage source={icons.star} style={{tintColor:'#FF5757'}} className='ml-1 w-5 h-5'/>
-                            </StyledView>
-                        </StyledView>
-                    </StyledPressable>
-                    <StyledView className='w-full mr-1 ml-1'>
-                        <StyledText numberOfLines={4}>{review.description}</StyledText>
-                    </StyledView>
-                </StyledView>
-                
-            ))
-        ):(
-            <StyledText>Reviews not found</StyledText>
-        )
-    );
-
-    
-    const RenderOtherListings= memo((() => (
-        otherListings && seller ? (
-            otherListings.map((listing: Listing, index: number)=>(
-                <StyledPressable  key={listing.id} className='flex' onPress={() => {router.push(`/listing/${listing.id}`)}}>
-                    <StyledView className='rounded-2xl p-1 mr-2' style={{width: layout.width/2}}>
-                        <StyledView className='self-center'>
-                            {listing.images ? (
-                                <StyledImage source={{ uri: listing.images[0] }} style={{ width: layout.width/2, height: layout.height/4 }}className="rounded-xl" />
-                            ):(
-                                <StyledImage source={icons.profile} style={{ width: layout.width/2, height: layout.height/4 }}className="rounded-xl" />
-                            )}
-                        </StyledView>
-                        <StyledView className='mt-2'>
-                            <StyledText className='font-bold text-xl' numberOfLines={2}>{listing.title}</StyledText>
-                            <StyledText className='text-darkGray' numberOfLines={2}>{listing.description}</StyledText>
-                            <StyledText className='text-lg font-bold mt-1'>${listing.price}</StyledText>
-                            {listing.listingType === 'auction' && listing.createdAt ? (
-                                <StyledView className='flex-row items-center'>
-                                    {listing.bids === 1 ?(
-                                        <StyledText className='text-md text-darkGray'>{listing.bids} Bid • </StyledText>
-                                    ):(
-                                        <StyledText className='text-md text-darkGray'>{listing.bids} Bids • </StyledText>
-                                    )}
-                                    <StyledText className='font-bold text-primary text-md'>{calcTimeRemaining(convertToDate(listing.createdAt._seconds, listing.createdAt._nanoseconds), Number(listing.duration))}</StyledText>
-                                </StyledView>
-                            ):(
-                                <StyledText className='text-md text-darkGray'>Qty: {listing.quantity}</StyledText>
-                            )}
-                        </StyledView>
-                    </StyledView>
-                </StyledPressable>
-            ))
-        ):(
-            <StyledText>No other listings found</StyledText>
-        )
-    )));
-
-    const SellerTab = memo((() => (
-        seller ? (
-            <StyledView className='ml-2 mr-2 mt-4'>
-                <StyledView className="flex-auto flex-row h-20">
-                    <StyledPressable onPress={() => {handleProfile(seller.id)}}>
-                    {seller.pfp ? (
-                        <StyledImage source={{ uri: seller.pfp }} className="w-20 h-20 rounded-full" />
-                    ):(
-                        <StyledImage source={icons.profile} className="w-20 h-20" />
-                    )}
-                    </StyledPressable>
-                    <StyledView className='flex-auto ml-2 mt-1 w-full'>
-                        <StyledView className='flex-row justify-between'>
-                            <StyledView>
-                                <StyledText className="text-2xl font-bold">{seller.username}</StyledText>
-                                <StyledText className='text-md'>Seller since 2024</StyledText>
-                            </StyledView>
-                            <StyledView className='flex-row'>
-                            <StyledPressable className='justify-center items-center bg-black active:bg-gray rounded-2xl mr-2 h-10 w-10' onPress={handleFollow}>
-                                <StyledImage source={icons.profile} style={{tintColor: '#FFFFFF'}} className='w-7 h-7'/>
-                            </StyledPressable>
-                            <StyledPressable className='justify-center items-center bg-black active:bg-gray rounded-2xl mr-2 h-10 w-10' onPress={handleMessage}>
-                                <StyledImage source={icons.message} className='h-7 w-7'/>
-                            </StyledPressable>
-                            </StyledView>
-                        </StyledView>
-                        <StyledView className='flex-row w-3/5 justify-between'>
-                            <StyledView className='flex-row items-center'>
-                                <StyledText className='text-lg'>{seller.numberOfFollowers}</StyledText>
-                                <StyledImage source={icons.follower} className='ml-1 w-5 h-5'/>  
-                            </StyledView>
-                            <StyledView className='flex-row items-center'>
-                                <StyledText className='text-lg'>{seller.rating}</StyledText>
-                                <StyledImage source={icons.star} style={{tintColor:'#FF5757'}} className='ml-1 w-5 h-5'/>
-                            </StyledView>
-                            <StyledView className='flex-row items-center'>
-                                <StyledText className='text-lg'>{seller.itemsSold}</StyledText>
-                                <StyledImage source={icons.sell} style={{tintColor:'#FF5757'}} className='ml-1 w-5 h-5'/>
-                            </StyledView>
-                        </StyledView>
-                    </StyledView>
-                </StyledView>
-                <StyledView className='mt-4 h-0.5 rounded-xl bg-gray' />
-                <StyledView>
-                    <StyledText className='ml-2 text-xl font-bold mt-4'>Reviews</StyledText>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        scrollEventThrottle={16}
-                        style={{marginTop:8}}
-                        pagingEnabled
-                    >
-                        <RenderReviews />
-                        
-                    </ScrollView>
-                </StyledView>
-                <StyledView>
-                    <StyledText className='ml-2 text-xl font-bold mt-4'>More from this Seller</StyledText>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        scrollEventThrottle={16}
-                        style={{marginTop:8}}
-                        removeClippedSubviews={false}
-                    >
-                        <RenderOtherListings />
-                        
-                    </ScrollView>
-                </StyledView>
-            </StyledView>
-            
-        ) : (
-            <StyledView className="justify-center items-center">
-                <StyledText className="text-xl">Seller cannot be found</StyledText>
-            </StyledView>
-        )
-    )));
-
     const handleTabPress = (index: number) => {
         if(index !== activeTab){
             setActiveTab(index);
@@ -568,12 +475,23 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
         const index = scrollX/(layout.width-16)
         setActiveTab(Math.round(index));
 
-        var toHeight = 100 + 610
+        let reviewExists = 0;
+        let otherListingsExists = 0;
+
+        if(reviews){
+            reviewExists = 1;
+        }
+
+        if(otherListings){
+            otherListingsExists = 1
+        }
+
+        var toHeight = Object.keys(details).length * 50 + index * (125+200*reviewExists+370*otherListingsExists-Object.keys(details).length*50)
         
 
         Animated.timing(tabHeights, {
             toValue: toHeight, // Increase modal height when complete
-            duration: 500,
+            duration: 300,
             useNativeDriver: false,
         }).start();
         
@@ -626,8 +544,19 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
 
     return (
         <StyledView className="flex-1 w-full bg-white rounded-2xl">
-            <ScrollView nestedScrollEnabled={true}>
-
+            <ScrollView 
+                contentContainerStyle={refreshing?{paddingTop:48}:{}}
+                nestedScrollEnabled={true} 
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl 
+                        refreshing={refreshing} 
+                        onRefresh={onRefresh}
+                        progressViewOffset={48}
+                        tintColor="#FF5757"
+                    />
+                }
+            >
                 {/* How to render page in the home screen (need TouchableHighlight for scrollview to work)*/}
                 {modal ? (
                     <TouchableHighlight>       
@@ -636,7 +565,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                                 <StyledPressable onPress={() => { handleLike(id, listing.likes) }} className='flex-row absolute bg-black right-4 bottom-2 rounded-full'>
                                     <StyledText className='text-white pl-2 text-xl font-bold self-center'>{listing.likes}</StyledText>
                                     {!isLiked ? (
-                                        <StyledImage source={icons.heartEmpty} className='w-6 h-6 m-2' />
+                                        <StyledImage source={icons.heartEmpty} className='w-6 h-6 m-2' style={{tintColor:'#FF5757'}}/>
                                     ) : (
                                         <StyledImage source={icons.heartFull} className='w-6 h-6 m-2' />
                                     )}
@@ -698,7 +627,16 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                                     </View>
                                     <View style={{ width: layout.width - 16 }}>
                                         {/* Seller Tab Content */}
-                                        <SellerTab />
+                                        <SellerTab 
+                                            seller = {seller}
+                                            handleProfile={handleProfile}
+                                            reviews={reviews}
+                                            layout={{height: layout.height, width: layout.width}}
+                                            otherListings={otherListings}
+                                            router={router}
+                                            calcTimeRemaining={calcTimeRemaining}
+                                            convertToDate={convertToDate}
+                                        />
                                     </View>
                                     </ScrollView>
                                 </Animated.View>
@@ -718,7 +656,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                             <StyledPressable onPress={() => { handleLike(id, listing.likes) }} className='flex-row absolute bg-darkGray right-4 bottom-2 rounded-full'>
                                 <StyledText className='text-white pl-2 text-xl font-bold self-center'>{listing.likes}</StyledText>
                                 {!isLiked ? (
-                                    <StyledImage source={icons.heartEmpty} className='w-6 h-6 m-2' />
+                                    <StyledImage source={icons.heartEmpty} className='w-6 h-6 m-2' style={{tintColor:'#FF5757'}}/>
                                 ) : (
                                     <StyledImage source={icons.heartFull} className='w-6 h-6 m-2' />
                                 )}
@@ -792,10 +730,47 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                                     </StyledView>
                                     <StyledView style={{ width: layout.width - 16 }}>
                                         {/* Seller Tab Content */}
-                                        <SellerTab />
+                                        <SellerTab 
+                                            seller = {seller}
+                                            handleProfile={handleProfile}
+                                            reviews={reviews}
+                                            layout={{height: layout.height, width: layout.width}}
+                                            otherListings={otherListings}
+                                            router={router}
+                                            calcTimeRemaining={calcTimeRemaining}
+                                            convertToDate={convertToDate}
+                                        />
                                     </StyledView>
                                 </ScrollView>
                             </Animated.View>
+                        </StyledView>
+
+                        {/* Related Items Block */}
+                        <StyledView className='ml-2 mr-2 mt-8'>
+                            <StyledText className='font-bold text-2xl ml-2'>Related Listings</StyledText>
+                            <ScrollView 
+                                horizontal 
+                                showsHorizontalScrollIndicator={false} 
+                                scrollEventThrottle={16} 
+                                style={{ marginTop: 8 }} 
+                                removeClippedSubviews={false}
+
+                            >
+                                <RenderRelatedListings 
+                                    layout={{height: layout.height, width: layout.width}}
+                                    relatedListings={relatedListings}
+                                    router={router}
+                                    calcTimeRemaining={calcTimeRemaining}
+                                    convertToDate={convertToDate}
+                                />
+                            </ScrollView>
+                        </StyledView>
+
+                        {/* Report Listing Block */}
+                        <StyledView className='mt-8 ml-2 mr-2'>
+                            <StyledPressable className='p-4 bg-darkerWhite active:bg-lightGray rounded-xl items-center'>
+                                <StyledText className='font-bold text-md text-red-500'>Report Listing</StyledText>
+                            </StyledPressable>
                         </StyledView>
                         <StyledView className="w-full bg-white mt-2 h-32" />
                     </StyledView>
@@ -803,12 +778,12 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
             </ScrollView>
 
             {/* Fixed Button Area */}
-            <StyledView className='absolute bottom-0 w-full shadow-md shadow-black bg-white'>
-                <StyledView className='flex-1 flex-row mb-2 justify-between gap-x-2 ml-2 mr-2 mb-8'>
+            <StyledView className='absolute h-20 bottom-0 w-full shadow-md shadow-black bg-white'>
+                <StyledView className='flex-row ml-2 mr-2 h-11 justify-between mb-8'>
                     {listing.listingType === 'fixed' ? (
-                        <StyledView className='flex-1 flex-row basis-2/3 mt-2 bg-black rounded-2xl justify-center items-center shadow-sm shadow-gray'>
+                        <StyledView className='flex-1 flex-row mt-2 bg-black rounded-xl justify-center items-center shadow-sm shadow-gray'>
                             <StyledPressable
-                                className='flex-1 flex-row basis-2/3 bg-primary active:bg-primaryDark rounded-2xl overflow-hidden justify-center items-center'
+                                className='flex-1 flex-row basis-2/3 bg-primary active:bg-primaryDark rounded-xl overflow-hidden justify-center items-center'
                                 onPressIn={handlePressIn}
                                 onPressOut={handlePressOut}
                             >
@@ -825,11 +800,20 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                                 <StyledText className='text-white text-2xl text-center font-bold shadow-sm shadow-gray'>${listing.price}</StyledText>
                                 <StyledText className='pl-8 text-white text-2xl text-center border-2 shadow-sm shadow-gray'>Buy Now</StyledText>
                             </StyledPressable>
+                            {listing.offerable && 
+                                <StyledPressable 
+                                    className='flex-1 flex-row basis-1/3 bg-darkerWhite active:bg-lightGray rounded-xl overflow-hidden justify-center items-center'
+                                    onPress={handleOffer}
+                                >
+                                    <StyledText className='pl-8 text-black text-2xl text-center border-2 shadow-sm shadow-gray'>Offer</StyledText>
+                                </StyledPressable>
+                            }
                         </StyledView>
+                        
                     ) : (
-                        <StyledView className='flex-1 flex-row basis-2/3 mt-2 bg-black rounded-2xl justify-center items-center shadow-sm shadow-gray'>
+                        <StyledView className='flex-1 flex-row mt-2 rounded-xl shadow-sm shadow-gray gap-x-2'>
                             <StyledPressable
-                                className='flex-1 flex-row basis-2/3 bg-primary active:bg-primaryDark rounded-2xl overflow-hidden justify-center items-center'
+                                className='flex-1 flex-row basis-2/3 bg-primary active:bg-primaryDark rounded-xl overflow-hidden justify-evenly items-center'
                                 onPressIn={handlePressIn}
                                 onPressOut={handlePressOut}
                             >
@@ -843,15 +827,14 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                                         width: animatedWidth,
                                     }}
                                 />
-                                <StyledText className='text-white text-2xl text-center font-bold shadow-sm shadow-gray'>${listing.price}</StyledText>
-                                <StyledText className='pl-8 text-white text-2xl text-center border-2 shadow-sm shadow-gray'>Bid</StyledText>
+                                <StyledText className='text-white text-lg font-bold shadow-sm shadow-gray'>${listing.price}</StyledText>
+                                <StyledText className='text-white font-bold text-lg shadow-sm shadow-gray'>Bid</StyledText>
                             </StyledPressable>
-                        </StyledView>
-                    )}
-                    {listing.offerable && (
-                        <StyledView className='flex-1 mt-2 bg-black rounded-2xl justify-center basis-1/3 shadow-sm shadow-black'>
-                            <StyledPressable className='flex-1 bg-black rounded-2xl justify-center basis-1/3' onPress={handleOffer}>
-                                <StyledText className='text-white text-2xl text-center'>Offer</StyledText>
+                            <StyledPressable 
+                                className='flex-1 basis-1/3 bg-darkerWhite active:bg-lightGray rounded-xl justify-center items-center h-full'
+                                onPress={handleCustomBid}
+                            >
+                                <StyledText className='text-black text-lg font-bold text-center border-2'>Custom</StyledText>
                             </StyledPressable>
                         </StyledView>
                     )}
