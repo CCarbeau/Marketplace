@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, Pressable, ScrollView } from 'react-native';
+import { View, Text, Image, Pressable, ScrollView, Alert } from 'react-native';
 import { styled } from 'nativewind';
 import icons from '../../../constants/icons';
 import RenderOtherListings from './otherListings';
@@ -56,7 +56,6 @@ interface Review {
 
 interface SellerTabProps {
     seller: Seller | null;
-    handleProfile: (id: string) => void;
     reviews: Review[];
     layout: Layout;
     otherListings: Listing[];
@@ -67,7 +66,6 @@ interface SellerTabProps {
 
 const SellerTab: React.FC<SellerTabProps> = ({
     seller,
-    handleProfile,
     reviews,
     layout,
     otherListings,
@@ -82,6 +80,10 @@ const SellerTab: React.FC<SellerTabProps> = ({
             </StyledView>
         );
     }
+
+    const handleProfile = (id: string) => {
+        Alert.alert('Profle initiated')
+    };
 
     return (
         <StyledView className="ml-2 mr-2 mt-4">
