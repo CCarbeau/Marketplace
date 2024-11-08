@@ -2,36 +2,12 @@ import React from 'react';
 import { View, Text, Image, Pressable } from 'react-native';
 import { styled } from 'nativewind';
 import icons from '../../../constants/icons';
+import { Listing, Seller, Layout, Review } from '@/types/interfaces';
 
 const StyledPressable = styled(Pressable);
 const StyledImage = styled(Image);
 const StyledView = styled(View);
 const StyledText = styled(Text);
-
-interface Review {
-  reviewerId: string;
-  sellerId: string;
-  rating: number;
-  description: string;
-  createdAt: string;
-  reviewerPfp: string;
-  reviewerUsername: string;
-}
-
-interface Seller {
-  username: string;
-  pfp: string;
-  rating: number;
-  numberOfFollowers: number;
-  itemsSold: number;
-  listings: string[];
-  id: string;
-}
-
-interface Layout {
-  height: number;
-  width: number;
-}
 
 interface RenderReviewsProps {
   reviews: Review[];

@@ -4,8 +4,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useRouter } from 'expo-router';
 import { doc, updateDoc } from 'firebase/firestore';
-import { auth } from '@/firebaseConfig';
-const { db } = require('../../firebaseConfig');
+import { auth } from '../../src/auth/firebaseConfig';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 

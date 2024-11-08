@@ -11,9 +11,12 @@ export default function Layout() {
         headerTransparent:true
         }} />
         <Stack.Screen name="createListing" options={{ 
-        headerTitle: '',
-        headerTransparent:true
-        }} />
+        headerTitle: 'Create Listing',
+        headerTintColor: '#FF5757',
+        headerTitleStyle: {
+          color: '#000000'
+        }
+      }} />
     </Stack>
   );
 }

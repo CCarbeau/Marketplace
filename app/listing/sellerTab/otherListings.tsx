@@ -4,47 +4,14 @@ import { styled } from 'nativewind';
 import icons from '../../../constants/icons';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, updateDoc, increment } from 'firebase/firestore';
-import { db } from '@/firebaseConfig';
+import { db } from '../../../src/auth/firebaseConfig';
+import { Listing, Seller, Layout } from '@/types/interfaces';
 
 const StyledPressable = styled(Pressable);
 const StyledImageBackground = styled(ImageBackground);
 const StyledImage = styled(Image);
 const StyledView = styled(View);
 const StyledText = styled(Text);
-
-interface Listing {
-  images: string[];
-  title: string;
-  description: string;
-  price: number;
-  quantity: number;
-  listingType: 'fixed' | 'auction';
-  bids?: number;
-  duration?: string;
-  createdAt?: RawTimestamp;
-  id: string;
-  likes: number;
-}
-
-interface RawTimestamp {
-  _seconds: string;
-  _nanoseconds: string;
-}
-
-interface Seller {
-  username: string;
-  pfp: string;
-  rating: number;
-  numberOfFollowers: number;
-  itemsSold: number;
-  listings: string[];
-  id: string;
-}
-
-interface Layout {
-  height: number;
-  width: number;
-}
 
 interface RenderOtherListingsProps {
   otherListings: Listing[];

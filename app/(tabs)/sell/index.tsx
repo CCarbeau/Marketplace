@@ -5,10 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { getAuth, onAuthStateChanged} from 'firebase/auth';
 
-import sellerExample from '../../../assets/images/sellerExample.png'
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '@/firebaseConfig'
+import sellerExample from '../../../assets/images/sellerExample.png';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../src/auth/firebaseConfig';
 
 const StyledPressable = styled(Pressable)
 const StyledView = styled(View)

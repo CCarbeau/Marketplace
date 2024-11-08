@@ -1,14 +1,11 @@
 import { View, Text, Pressable, TextInput, Modal, Image, ImageBackground, Animated, Dimensions } from 'react-native'
 import { styled } from 'nativewind';
 import React, { useState, useEffect, useRef } from 'react'
-import { auth } from '../../firebaseConfig';
 import { onAuthStateChanged, User, signInWithEmailAndPassword } from 'firebase/auth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import icons from '../../constants/icons';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import InterestModal from './interest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -43,6 +40,18 @@ const signIn = () => {
   const animatedValue = useRef(new Animated.Value(0)).current;
   const animatedSignUp = useRef(new Animated.Value(0)).current;
 
+  // Automatically switch images at a set interval (e.g., every 3 seconds)
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setTimeout(() => {
+        setCurrentImageIndex((prevIndex) => (prevIndex + 1) % images.length);
+        slideshowAnimation.setValue(screenWidth); // Reset position for the next animation
+      },0); // delay between slide animations
+    }, 5000); 
+
+    return () => clearInterval(intervalId);
+  }, []);
+
   const handleSignIn = async () => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -61,18 +70,6 @@ const signIn = () => {
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const slideshowAnimation = useRef(new Animated.Value(screenWidth)).current;
-
-  // Automatically switch images at a set interval (e.g., every 3 seconds)
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setTimeout(() => {
-        setCurrentImageIndex((prevIndex) => (prevIndex + 1) % images.length);
-        slideshowAnimation.setValue(screenWidth); // Reset position for the next animation
-      },0); // delay between slide animations
-    }, 5000); 
-
-    return () => clearInterval(intervalId);
-  }, []);
 
   const handleSlide = (toSignUp: boolean) => {
     Animated.timing(animatedValue, {

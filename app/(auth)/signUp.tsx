@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import icons from '../../constants/icons';
-import { auth } from '@/firebaseConfig';
+import { auth } from '../../src/auth/firebaseConfig';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 const StyledPressable = styled(Pressable)

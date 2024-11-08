@@ -4,7 +4,7 @@ import { styled } from 'nativewind';
 import icons from '../../constants/icons';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, updateDoc, increment } from 'firebase/firestore';
-import { db } from '@/firebaseConfig';
+import { db } from '../../src/auth/firebaseConfig';
 
 const StyledPressable = styled(Pressable);
 const StyledImageBackground = styled(ImageBackground);

@@ -47,9 +47,8 @@ const InterestModal: React.FC<InterestsModalProps> = ({ visible, onClose, onSele
                         <StyledText className='text-2xl text-primary text-center mt-4 font-bold'>Select Interests</StyledText>
                         <StyledView className='bg-gray mt-2 w-full h-px' />
                         {options.map((option) => (
-                            <React.Fragment>
+                            <React.Fragment key={option}>
                                 <StyledPressable
-                                    key={option}
                                     onPress={() => handleInterestsSelect(option)}
                                     className='flex-row h-10 w-full items-center justify-between active:bg-gray'
                                 >

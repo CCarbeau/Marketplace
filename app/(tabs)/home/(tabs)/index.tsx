@@ -1,34 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, Pressable, ImageBackground, FlatList, Dimensions, Alert, Animated, Platform, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, ImageBackground, FlatList, Dimensions, Alert, Animated, Platform, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { styled } from 'nativewind';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { ref, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/firebaseConfig'; // Import your storage instance
 import { LinearGradient } from 'expo-linear-gradient';
 import icons from '../../../../constants/icons';
 import { getAuth, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Modal from 'react-native-modal';
 import ListingPage from '@/app/listing/[id]';
+import RenderBottomBar from '@/app/listing/BottomBar';
+import { Listing } from '@/types/interfaces';
+import { handleComment, handleFollow, handleLike, handleProfile } from '@/app/listing/userInputFunctions';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const StyledPressable = styled(Pressable)
 const StyledImage = styled(Image)
 const StyledView = styled(View)
 const StyledText = styled(Text)
 const StyledImageBackground = styled(ImageBackground)
-const StyledScrollView = styled(ScrollView)
-
-type Listing = {
-  id: number;
-  urls: string[];
-  title: string;
-  description: string;
-  price: number;
-  likes: number;
-  offerable: boolean;
-  ownerUID: string;
-};
 
 const Index = () => {
   const { height: screenHeight } = Dimensions.get('window');
@@ -41,8 +31,8 @@ const Index = () => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [currentListingIndex, setCurrentListingIndex] = useState(0);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [networkError, setNetworkError] = useState(false);
+  const [modalVisible, setModalVisible] = useState<{ [key: string]: boolean }>({});
 
   const [ signedIn, setSignedIn ] = useState(false);
   const auth = getAuth();
@@ -51,17 +41,17 @@ const Index = () => {
     fetchRandomListing();  // Initial fetch
   }, []);
 
-  // useEffect(() => {
-  //   const checkAuthStatus = async () => {
-  //     const token = await AsyncStorage.getItem('userToken');
-  //     if (token) {
-  //       // Sign in the user with the token (Firebase client now tracks the session)
-  //       await signInWithCustomToken(auth, token);
-  //     }
-  //   };
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      const token = await AsyncStorage.getItem('userToken');
+      if (token) {
+        // Sign in the user with the token (Firebase client now tracks the session)
+        await signInWithCustomToken(auth, token);
+      }
+    };
 
-  //   checkAuthStatus();
-  // }, []);
+    checkAuthStatus();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -77,126 +67,69 @@ const Index = () => {
   
   const fetchRandomListing = async () => {
     try {
-      // Randomly select a document ID; adjust as needed for your use case
-      // const docId = Math.floor(Math.random() * 2) + 2; 
-      const docId = 1
-      const docRef = doc(db, "listings", docId.toString());
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const docData = docSnap.data();
-        const imageUrls = await Promise.all(docData.images.map(async (imagePath:string) => {
-          const imageRef = ref(storage, imagePath);
-          return await getDownloadURL(imageRef);
-        }));
-
-        setListings(prevListings => [...prevListings, { 
-          id: docId, 
-          urls: imageUrls, 
-          title:docData["title"],
-          description:docData["description"],
-          price: docData["price"], 
-          likes: docData["likes"],
-          offerable: docData["offerable"],
-          ownerUID: docData["ownerUID"],
-          }]);
+      if(listings.length === 0){
+        setLoading(true);
       }
-    } catch (error) {
-      console.error("Error fetching document:", error);
-    }
-  };
 
-  const [progress] = useState(new Animated.Value(0));
+      const response = await fetch(`${API_URL}/listings/fetch-random-listings?numListings=10`, {
+        method: 'GET',
+      });
 
-  const handlePressIn = () => {
-    Animated.timing(progress, {
-      toValue: 1,
-      duration: 1500, // 3 seconds for full color change
-      useNativeDriver: false,
-    }).start(({ finished }) => {
-      if(finished){
-        handlePurchase();
+      if(!response.ok){
+        throw new Error(`Error fetching listings: ${response.status}`);
       }
-    });
-  };
 
-  const handlePressOut = () => {
-    Animated.timing(progress, {
-      toValue: 0,
-      duration: 500, // quickly reset to the initial state
-      useNativeDriver: false,
-    }).start();
-  };
-
-  // Interpolate the background color of the button
-  const animatedWidth = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'], // Start at 0% width and grow to 100%
-  });
-
-  const handleLike = async (docId: number, currentLikes: number) => {
-    if (signedIn) {
-      try {
-        setIsLiked(!isLiked);
-        const newLikes = isLiked ? currentLikes - 1 : currentLikes + 1;
-        const docRef = doc(db, "listings", docId.toString());
-        
-        await updateDoc(docRef, { likes: newLikes });
-  
-        // Update the local state to reflect the new like count
-        setListings(prevListings =>
-          prevListings.map(listing =>
-            listing.id === docId ? { ...listing, likes: newLikes } : listing
-          )
+      const data = await response.json();
+                    
+      setListings((prevListings) => {
+        const existingIds = new Set(prevListings.map((listing) => listing.id));
+        const newUniqueListings = data.listings.filter(
+          (listing: Listing) => !existingIds.has(listing.id)
         );
-      } catch (error) {
-        console.error("Error updating likes:", error);
+        return [...prevListings, ...newUniqueListings];
+      });
+      
+    } catch (error: unknown) {
+      console.log(error);
+
+      if (error instanceof Error) {
+        if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
+          setNetworkError(true);
+        } else {
+          console.error("Non-network error occurred:", error.message);
+        }
+      } else {
+        console.error("An unexpected error occurred:", error);
       }
-    } else {
-      router.push('/(auth)/')
+
+    } finally {
+      setLoading(false);
     }
   };
-
-  const handleComment = () => {
-    // Handle comment logic
-  };
-
-  const handleProfile = () => {
-    // Handle profile logic
-  };
-
-  const handleFollow = () => {
-    // Handle follow logic
-  };
-
-  const handlePurchase = () => {
-    Alert.alert('purchase initiated')
-  }
-
-  const handleOffer = () => {
-
-  }
 
   const handleLoadMore = () => {
-    if (!loading) {
-      setLoading(true);
-      fetchRandomListing().then(() => setLoading(false));
-    }
+    fetchRandomListing();
   };
 
   const handleImagePress = () => {
     setCurrentImageIndex((prevIndex) => {
       const currentListing = listings[0];
       const newIndex = prevIndex + 1;
-      return newIndex < currentListing.urls.length ? newIndex : 0;
+      return newIndex < currentListing.images.length ? newIndex : 0;
     });
   };
 
-  const renderItem = ({ item }: { item: Listing }) => {
-    const imageUrl = item.urls[currentImageIndex];
-    const likes = item.likes;
-    const price = item.price;
+  const handleModalOpen = (id: string) => {
+    setModalVisible((prevState) => ({ ...prevState, [id]: true }));
+  };
 
+  const handleModalClose = (id: string) => {
+    setModalVisible((prevState) => ({ ...prevState, [id]: false }));
+  };
+
+  const renderItem = ({ item }: { item: Listing }) => {
+    const imageUrl = item.images[currentImageIndex];
+    const likes = item.likes;
 
     return (
       <Pressable onPress={handleImagePress} style={{ height: screenHeight }}>
@@ -208,7 +141,7 @@ const Index = () => {
               end={{ x: 0.5, y: 1 }}   // Gradient end point
               style={{ flex: 1, justifyContent: 'center'}}
             >
-              <StyledPressable className='absolute right-4 bottom-8' onPress={() => router.push('/(tabs)/home/(tabs)/messages')}>
+              <StyledPressable className='absolute right-4 bottom-8 shadow-sm shadow-darkGray' onPress={() => router.push('/(tabs)/home/(tabs)/messages')}>
                 <StyledImage 
                   source={icons.message} 
                   className='h-8 w-8'
@@ -217,8 +150,8 @@ const Index = () => {
             </LinearGradient>
           </StyledView>
 
-          <StyledView className='absolute mt-80 right-4 z-10'>
-            <Pressable onPress={() => handleLike(item.id, likes)}>
+          <StyledView className='absolute mt-80 right-4 z-10 shadow-sm shadow-darkGray'>
+            <Pressable onPress={() => handleLike(item.id, likes, signedIn, setIsLiked, setListings, isLiked, router)}>
               <StyledImage source={isLiked ? icons.heartFull : icons.heartEmpty} className='w-12 h-12' />
               <StyledText className='p-2 text-white text-center'>{likes}</StyledText>
             </Pressable>
@@ -243,39 +176,19 @@ const Index = () => {
             end={{ x: 0.5, y: 0}}   // Gradient end point/>
             style={{ flex: 1 }}
             >
-              <StyledView className='absolute bottom-20 w-full'>
-                <StyledPressable onPress={() => {setModalVisible(true)}} className='w-full rounded-2xl active:bg-lightGray active:opacity-50'>
+              <StyledView className='absolute bottom-20 w-full shadow-sm shadow-darkGray'>
+                <StyledPressable onPress={() => {handleModalOpen(item.id)}} className='w-full rounded-2xl active:bg-lightGray active:opacity-50'>
                   <StyledImage source={icons.carrot} className='w-5 h-5 self-center'/>
                   <StyledText className='text-white text-2xl pl-4 pr-4 font-bold truncate mt-2' numberOfLines={1}>{item.title}</StyledText>
                   <StyledText className='pl-4 pr-4 text-white truncate' numberOfLines={1}>{item.description}</StyledText>
                 </StyledPressable>
-                <StyledView className='flex-1 flex-row mb-2 justify-between pl-2 pr-2 gap-x-2'>
-                  <StyledPressable 
-                    className='flex-1 flex-row basis-2/3 mt-2 bg-primary active:bg-primaryDark rounded-2xl overflow-hidden justify-center items-center h-10' 
-                    onPressIn={handlePressIn} 
-                    onPressOut={handlePressOut}
-                  >
-                    <Animated.View
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        backgroundColor: '#00FF00', // Green color
-                        width: animatedWidth, // Animate the width
-                      }}
-                    />
-                    <StyledText className='text-white text-2xl text-center font-bold shadow-sm shadow-gray'>${item.price}</StyledText>
-                    <StyledText className='pl-8 text-white text-2xl text-center shadow-sm shadow-gray'>Buy Now</StyledText>
-                  </StyledPressable>
-                  {item.offerable && (
-                    <StyledPressable className='flex-1 mt-2 bg-white active:bg-gray rounded-2xl justify-center basis-1/3' onPress={handleOffer}>
-                      <StyledText className='text-darkGray text-2xl text-center'>Offer</StyledText>
-                    </StyledPressable>
-                  )}
+                <StyledView className='flex-row mb-2 ml-2'>
+                  <RenderBottomBar 
+                    listing = {item}
+                  />
                 </StyledView>
                 <StyledView className='flex flex-row justify-center gap-x-8 mb-2'>
-                  {item.urls.map((_, index) => (
+                  {item.images.map((_, index) => (
                     <StyledView key={index} className={`${index===currentImageIndex ? 'bg-primary': 'bg-white'} w-3 h-3 rounded-full`} />
                   ))}
                 </StyledView>
@@ -284,23 +197,48 @@ const Index = () => {
           </StyledView>
           
           <Modal
-            isVisible={modalVisible}
+            isVisible={modalVisible[item.id]}
             style={styles.bottomModal}
-            onBackdropPress={() => {setModalVisible(!modalVisible)}}
+            onBackdropPress={() => {handleModalClose(item.id)}}
             swipeDirection="down" // Allows swipe-to-dismiss
-            onSwipeComplete={() => {setModalVisible(!modalVisible)}}
+            onSwipeComplete={() => {handleModalClose(item.id)}}
           >
             <StyledView className='flex absolute top-0 items-center w-full h-8 z-10'>
-                <StyledPressable onPress={() => {setModalVisible(false)}} className='flex w-full h-10 active:bg-lightGray active:opacity-50 items-center' style={{borderTopLeftRadius:16, borderTopRightRadius: 16}}>
+                <StyledPressable onPress={() => {handleModalClose(item.id)}} className='flex w-full h-10 active:bg-lightGray active:opacity-50 items-center' style={{borderTopLeftRadius:16, borderTopRightRadius: 16}}>
                     <StyledImage source={icons.carrot} className='w-5 h-5 mt-2' style={{ transform: [{ rotate: '180deg' }] }}></StyledImage>
                 </StyledPressable>
             </StyledView>
-            <ListingPage id={item.id.toString()}/>
+            <ListingPage id={item.id}/>
           </Modal>
         </StyledImageBackground>
       </Pressable>
     );
   };
+
+  if (loading) {
+    return (
+    <StyledView className="flex-1 justify-center items-center">
+        <ActivityIndicator size="large" color="#FF5757" />
+    </StyledView>
+    );
+  }
+
+  const handleRetry = () => {
+    setNetworkError(false);
+    fetchRandomListing(); // Retry fetching data
+  };
+
+  if(networkError){
+    return (
+      <StyledView className="flex-1 justify-center items-center">
+        <StyledText className="text-xl font-bold">Failed to load listings</StyledText>
+        <StyledText className="text-lg">Check your internet connection</StyledText>
+        <StyledPressable className="mt-4 p-4 bg-primary active:bg-primaryDark rounded-xl" onPress={handleRetry}>
+          <StyledText className="text-white font-bold">Retry</StyledText>
+        </StyledPressable>
+      </StyledView>
+    )
+  }
 
   return (
     <FlatList
@@ -308,7 +246,7 @@ const Index = () => {
       renderItem={renderItem}
       keyExtractor={item => item.id.toString()}
       onEndReached={handleLoadMore}
-      onEndReachedThreshold={0.5}
+      onEndReachedThreshold={0.2}
       pagingEnabled
       snapToInterval={screenHeight} // Ensure snapping to full screen height
       snapToAlignment="start"

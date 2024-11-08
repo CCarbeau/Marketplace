@@ -3,13 +3,13 @@ import { View, Text, Image, Pressable, ImageBackground, Animated, ScrollView, Ac
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { styled } from 'nativewind';
 import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
-import { db, storage } from '@/firebaseConfig'; // Import your storage instance
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import icons from '../../constants/icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SellerTab from './sellerTab';
 import RenderRelatedListings from './relatedListings';
-import PulsatingCircle from '@/components/PulsatingCircle';
+import RenderBottomBar from './BottomBar';
+import { Listing, Seller, Review } from '@/types/interfaces';
 
 const StyledPressable = styled(Pressable);
 const StyledImage = styled(Image);
@@ -19,73 +19,12 @@ const StyledImageBackground = styled(ImageBackground);
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-interface Listing {
-  images: string[];
-  title: string;
-  description: string;
-  price: number;
-  quantity: number;
-  category?: string;
-  athlete?: string;
-  team?: string;
-  year?: number;
-  brand?: string;
-  set?: string;
-  features?: string[];
-  parallel?: string;
-  printRun?: number;
-  cardsInLot?: number;
-  athletes?: string[];
-  teams?: string[];
-  listingType: 'fixed' | 'auction';
-  bids?: number;
-  duration?: string;
-  offerable?: boolean;
-  scheduled?: boolean;
-  date?: string;
-  time?: string;
-  shippingType?: 'flat' | 'variable';
-  weight?: number;
-  shippingProfile?: string;
-  shippingCost?: number;
-  likes: number;
-  ownerUID?: string;
-  createdAt?: RawTimestamp;
-  id: string;
-  random?: number;
-}
-
-interface RawTimestamp{
-    _seconds: string,
-    _nanoseconds: string,
-}
-
 interface ListingPageProps {
   id?: string;
 }
 
 interface Details {
   [key: string]: any;
-}
-
-interface Review {
-    reviewerId: string;
-    sellerId: string;
-    rating: number;
-    description: string;
-    createdAt: string;
-    reviewerPfp: string;
-    reviewerUsername: string;
-}
-
-interface Seller {
-  username: string;
-  pfp: string;
-  rating: number;
-  numberOfFollowers: number;
-  itemsSold: number;
-  listings: string[];
-  id: string;
 }
 
 const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
@@ -116,21 +55,19 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
         const fetchListing = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(`${API_URL}/fetch-listings-by-id?id=${id}`, {
+                const response = await fetch(`${API_URL}/listings/fetch-listing-by-id?id=${id}`, {
                     method: 'GET',
                 });
         
                 if (!response.ok) {
-                    throw new Error(`Error fetching other listings: ${response.status}`);
+                    throw new Error(`Error fetching listing: ${response.status}`);
                 }
         
                 const data = await response.json();
-                console.log(data);
                 const listing = data.listing as Listing
 
                 setListing(listing);
                 
-
                 if(propId){setModal(true);}
 
                 const includeIfDefined = (key: string, value: string | string[] | undefined | null) => (value !== undefined && value !== null ? { [key]: value } : {});
@@ -186,7 +123,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
             if (listing){
                 try{
                     setLoading(true);
-                    const response = await fetch(`${API_URL}/fetch-seller?id=${listing.ownerUID}`, {
+                    const response = await fetch(`${API_URL}/sellers/fetch-seller?id=${listing.ownerUID}`, {
                         method: 'GET',
                     });
     
@@ -216,7 +153,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
           if (listing && listing.ownerUID) {
             try {
                 setLoading(true);
-                const response = await fetch(`${API_URL}/fetch-reviews?sellerId=${listing.ownerUID}`, {
+                const response = await fetch(`${API_URL}/listings/fetch-reviews?sellerId=${listing.ownerUID}`, {
                     method: 'GET',
                 });
         
@@ -247,12 +184,13 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
             if (listing && listing.ownerUID) {
                 try {
                     setLoading(true);
-                    const response = await fetch(`${API_URL}/fetch-listings-by-owner?numListings=10&sellerId=${listing.ownerUID}&listingId=${id}`, {
-                    method: 'GET',
+                    const response = await fetch(`${API_URL}/listings/fetch-random-listings-by-owner?numListings=10&sellerId=${listing.ownerUID}&listingId=${id}`, {
+                        method: 'GET',
                     });
         
                     if (!response.ok) {
-                    throw new Error(`Error fetching other listings: ${response.status}`);
+                        
+                        throw new Error(`Error fetching other listings: ${response.status}`);
                     }
         
                     const data = await response.json();
@@ -280,7 +218,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
             if (listing) {
                 try {
                     setLoading(true);
-                    const response = await fetch(`${API_URL}/fetch-listings-by-category?numListings=10&category=${listing.category}&listingId=${id}`, {
+                    const response = await fetch(`${API_URL}/listings/fetch-random-listings-by-category?numListings=10&category=${listing.category}&listingId=${id}`, {
                         method: 'GET',
                     });
         
@@ -303,7 +241,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
         if (relatedListings.length === 0 ){
             fetchRelatedListings()
         }
-    },[listing, relatedListings, refreshing])
+    },[listing, id, relatedListings, refreshing])
 
     // Set the dynamic heights of each tab in the seller/details tabs
     const [tabHeights, setTabHeights] = useState(new Animated.Value(100));
@@ -347,18 +285,6 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
             router.push('/(auth)/')
         }
     };
-
-    const handlePurchase = () => {
-        Alert.alert('purchase initiated')
-    }
-
-    const handleOffer = () => {
-
-    }
-
-    const handleCustomBid = () => {
-
-    }
 
     const handleReport = () => {
 
@@ -506,81 +432,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
         )
     }
 
-    // Render Bottom Bar
-    const RenderBottomBar = () => {
-        if(!listing){
-            return <StyledText className="text-center mt-4">Listing not found</StyledText>;
-        }
-
-        return (
-            <StyledView className='absolute h-20 bottom-0 w-full shadow-md shadow-black bg-white'>
-                <StyledView className='flex-row ml-2 mr-2 h-11 justify-between mb-8'>
-                    {listing.listingType === 'fixed' ? (
-                        <StyledView className='flex-1 flex-row mt-2 bg-black rounded-xl justify-center items-center shadow-sm shadow-gray'>
-                            <StyledPressable
-                                className='flex-1 flex-row basis-2/3 bg-primary active:bg-primaryDark rounded-xl overflow-hidden justify-center items-center'
-                                onPressIn={handlePressIn}
-                                onPressOut={handlePressOut}
-                            >
-                                <Animated.View
-                                    style={{
-                                        position: 'absolute',
-                                        left: 0,
-                                        top: 0,
-                                        bottom: 0,
-                                        backgroundColor: '#00FF00',
-                                        width: animatedWidth,
-                                    }}
-                                />
-                                <StyledText className='text-white text-2xl text-center font-bold shadow-sm shadow-gray'>${listing.price}</StyledText>
-                                <StyledText className='pl-8 text-white text-2xl text-center border-2 shadow-sm shadow-gray'>Buy Now</StyledText>
-                                <PulsatingCircle/>
-                            </StyledPressable>
-                            {listing.offerable && 
-                                <StyledPressable 
-                                    className='flex-1 flex-row basis-1/3 bg-darkerWhite active:bg-lightGray rounded-xl overflow-hidden justify-center items-center'
-                                    onPress={handleOffer}
-                                >
-                                    <StyledText className='pl-8 text-black text-2xl text-center border-2 shadow-sm shadow-gray'>Offer</StyledText>
-                                </StyledPressable>
-                            }
-                        </StyledView>
-                        
-                    ) : (
-                        <StyledView className='flex-1 flex-row mt-2 rounded-xl shadow-sm shadow-gray gap-x-2'>
-                            <StyledPressable
-                                className='flex-1 flex-row basis-2/3 bg-primary active:bg-primaryDark rounded-xl overflow-hidden justify-evenly items-center'
-                                onPressIn={handlePressIn}
-                                onPressOut={handlePressOut}
-                            >
-                                <Animated.View
-                                    style={{
-                                        position: 'absolute',
-                                        left: 0,
-                                        top: 0,
-                                        bottom: 0,
-                                        backgroundColor: '#00FF00',
-                                        width: animatedWidth,
-                                    }}
-                                />
-                                <StyledView className='flex-row gap-x-2'>
-                                    <StyledText className='text-white text-lg font-bold shadow-sm shadow-gray'>${listing.price}</StyledText>
-                                    <StyledText className='text-white font-bold text-lg shadow-sm shadow-gray'>Bid</StyledText>
-                                </StyledView>
-                                <PulsatingCircle/>
-                            </StyledPressable>
-                            <StyledPressable 
-                                className='flex-1 basis-1/3 bg-darkerWhite active:bg-lightGray rounded-xl justify-center items-center h-full'
-                                onPress={handleCustomBid}
-                            >
-                                <StyledText className='text-black text-lg font-bold text-center border-2'>Custom</StyledText>
-                            </StyledPressable>
-                        </StyledView>
-                    )}
-                </StyledView>
-            </StyledView>
-        )
-    }
+    
 
     // Render Report Listing Button & Bottom Padding
     const RenderReportListing = () => (
@@ -650,35 +502,6 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
         inputRange: [0, 1],
         outputRange: [0, 1], // Adjust this to match the movement across tabs
     });  
-
-
-    // Bid/Buy Now Button Animation
-    const [progress] = useState(new Animated.Value(0));
-
-    const handlePressIn = () => {
-        Animated.timing(progress, {
-        toValue: 1,
-        duration: 1500, // 3 seconds for full color change
-        useNativeDriver: false,
-        }).start(({ finished }) => {
-        if(finished){
-            handlePurchase();
-        }
-        });
-    };
-
-    const handlePressOut = () => {
-        Animated.timing(progress, {
-        toValue: 0,
-        duration: 500, // quickly reset to the initial state
-        useNativeDriver: false,
-        }).start();
-    };
-
-    const animatedWidth = progress.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0%', '100%'], // Start at 0% width and grow to 100%
-    });
 
     {/* Main Component */}
 
@@ -761,13 +584,13 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                                 {/* Tab Content */}
                                 <Animated.View style={{ height: tabHeights }}>
                                     <ScrollView
-                                    ref={scrollViewRef}
-                                    horizontal
-                                    pagingEnabled
-                                    showsHorizontalScrollIndicator={false}
-                                    onScroll={onScroll}
-                                    scrollEventThrottle={16}
-                                    nestedScrollEnabled
+                                        ref={scrollViewRef}
+                                        horizontal
+                                        pagingEnabled
+                                        showsHorizontalScrollIndicator={false}
+                                        onScroll={onScroll}
+                                        scrollEventThrottle={16}
+                                        nestedScrollEnabled
                                     >
                                         <StyledView style={{ width: layout.width - 16 }}>
                                             {/* Details Tab Content */}
@@ -926,7 +749,13 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
             </ScrollView>
 
             {/* Fixed Button Area */}
-            <RenderBottomBar />
+            <StyledView className='absolute h-20 bottom-0 w-full shadow-md shadow-black bg-white'>
+                <StyledView className='flex-row ml-4 mr-2 h-11 justify-between mb-8'>
+                    <RenderBottomBar 
+                        listing={listing}
+                    />
+                </StyledView>
+            </StyledView>
         </StyledView>
     );
 };

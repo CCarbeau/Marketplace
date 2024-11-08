@@ -3,7 +3,7 @@ import { View, Pressable, Image, Alert, Animated, TextInput, Text, ScrollView, I
 import * as ImagePicker from 'expo-image-picker';
 import { Href, Router, useRouter } from 'expo-router';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject, list } from 'firebase/storage';
-import { db, storage, auth } from '../../../../firebaseConfig';
+import { db, storage, auth } from '../../../../src/auth/firebaseConfig';
 import { collection, addDoc } from "firebase/firestore"; 
 import { styled } from 'nativewind';
 
@@ -392,8 +392,8 @@ const CreateListing = () => {
   return (
     <StyledView className='justify-center flex-1'>
       <StyledView className={'bg-white flex-1 h-full w-full'}>
-        <StyledScrollView className='mt-16'>
-          <StyledView className='h-96 mt-8'>
+        <StyledScrollView className=''>
+          <StyledView className='h-96'>
             <StyledScrollView className='flex-1 h-full' horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={handleImageScroll} scrollEventThrottle={16}>
               {images.map((imageUri, index) => (
                   <StyledImageBackground
@@ -809,8 +809,8 @@ const CreateListing = () => {
                 <StyledPressable className={`${listingType==='auction' && 'bg-primary'} flex-1 border-2 border-black rounded-2xl active:bg-gray`} onPress={() => setListingType('auction')}>
                   <StyledText className={`${listingType==='auction' && 'text-white'} text-lg font-bold text-center`}>Auction</StyledText>
                 </StyledPressable>
-                <StyledPressable className={`${listingType==='buy now' && 'bg-primary'} flex-1 border-2 border-black rounded-2xl active:bg-gray`} onPress={() => setListingType('buy now')}>
-                  <StyledText className={`${listingType==='buy now' && 'text-white'} text-lg font-bold text-center`}>Buy Now</StyledText>
+                <StyledPressable className={`${listingType==='fixed' && 'bg-primary'} flex-1 border-2 border-black rounded-2xl active:bg-gray`} onPress={() => setListingType('fixed')}>
+                  <StyledText className={`${listingType==='fixed' && 'text-white'} text-lg font-bold text-center`}>Buy Now</StyledText>
                 </StyledPressable>
             </StyledView>
 

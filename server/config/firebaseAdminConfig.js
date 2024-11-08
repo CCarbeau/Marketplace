@@ -1,5 +1,5 @@
 import admin from 'firebase-admin';
-import serviceAccount from './hobby-9f8d2-firebase-adminsdk-oqpe3-4ee733ca53.json' assert { type: 'json' };  // Import the JSON file
+import serviceAccount from '../../hobby-9f8d2-firebase-adminsdk-oqpe3-4ee733ca53.json' assert { type: 'json' };  // Import the JSON file
 
 // Initialize Firebase Admin SDK with service account credentials
 admin.initializeApp({

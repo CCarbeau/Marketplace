@@ -4,55 +4,12 @@ import { styled } from 'nativewind';
 import icons from '../../../constants/icons';
 import RenderOtherListings from './otherListings';
 import RenderReviews from './reviews';
+import { Listing, Seller, Layout, Review } from '@/types/interfaces';
 
 const StyledPressable = styled(Pressable);
 const StyledImage = styled(Image);
 const StyledView = styled(View);
 const StyledText = styled(Text);
-
-interface Seller {
-    username: string;
-    pfp: string;
-    rating: number;
-    numberOfFollowers: number;
-    itemsSold: number;
-    listings: string[];
-    id: string;
-}
-
-interface Listing {
-    images: string[];
-    title: string;
-    description: string;
-    price: number;
-    quantity: number;
-    listingType: 'fixed' | 'auction';
-    bids?: number;
-    duration?: string;
-    createdAt?: RawTimestamp;
-    id: string;
-    likes: number;
-}
-
-interface RawTimestamp {
-    _seconds: string;
-    _nanoseconds: string;
-}
-
-interface Layout {
-    height: number;
-    width: number;
-}
-
-interface Review {
-    reviewerId: string;
-    sellerId: string;
-    rating: number;
-    description: string;
-    createdAt: string;
-    reviewerPfp: string;
-    reviewerUsername: string;
-}
 
 interface SellerTabProps {
     seller: Seller | null;

@@ -16,6 +16,13 @@ import eye from '..//assets/icons/eye.png'
 import eyePass from '..//assets/icons/eyePass.png'
 import follower from '..//assets/icons/follower.png'
 import star from '..//assets/icons/star.png'
+import gavel from '..//assets/icons/gavel.png'
+import setting from '..//assets/icons/setting.png'
+import camera from '..//assets/icons/camera.png'
+import menu from '..//assets/icons/menu.png'
+import money from '..//assets/icons/money.png'
+import handshake from '..//assets/icons/handshake.png'
+import dollar from '..//assets/icons/dollar.png'
 
 
 export default {
@@ -36,5 +43,12 @@ export default {
   eye,
   eyePass, 
   follower,
-  star
+  star,
+  gavel,
+  setting,
+  camera,
+  menu,
+  money,
+  handshake,
+  dollar,
 };
