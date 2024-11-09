@@ -242,7 +242,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
         if (relatedListings.length === 0 ){
             fetchRelatedListings()
         }
-    },[listing, id, relatedListings, refreshing])
+    },[listing, id, refreshing])
 
     // Set the dynamic heights of each tab in the seller/details tabs
     const [tabHeights, setTabHeights] = useState(new Animated.Value(100));
