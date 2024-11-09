@@ -590,14 +590,10 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
                     </ScrollView>
                 </Animated.View>
               </StyledView>
+              <StyledView className='h-32'/>
             </StyledView>
           </ScrollView>
         </StyledView>
-
-        <StyledPressable onPress={handleSignOut} className='self-center bg-primary p-4 rounded-xl mt-4'>
-          <StyledText className='font-bold text-white'>Sign Out</StyledText>
-        </StyledPressable>
-        <StyledView className='w-full h-32 bg-white'/>
       </StyledView>
     </ScrollView>
   );

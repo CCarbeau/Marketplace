@@ -19,7 +19,7 @@ export default function Layout() {
         headerTintColor: '#FF5757',
         headerTitleStyle: {
           color: '#000000'
-        }
+        },
       }} />
     </Stack>
   );

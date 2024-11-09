@@ -28,6 +28,7 @@ interface Details {
 }
 
 const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
+    console.log('called');
     // Utility imports
     const router = useRouter();
     const auth = getAuth();

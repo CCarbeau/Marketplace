@@ -23,6 +23,13 @@ import menu from '..//assets/icons/menu.png'
 import money from '..//assets/icons/money.png'
 import handshake from '..//assets/icons/handshake.png'
 import dollar from '..//assets/icons/dollar.png'
+import email from '..//assets/icons/email.png'
+import lock from '..//assets/icons/lock.png'
+import pin from '..//assets/icons/pin.png'
+import question from '..//assets/icons/question.png'
+import terms from '..//assets/icons/terms.png'
+import creditCard from '..//assets/icons/creditCard.png'
+import transactions from '..//assets/icons/transactions.png'
 
 
 export default {
@@ -51,4 +58,11 @@ export default {
   money,
   handshake,
   dollar,
+  email,
+  lock,
+  pin,
+  question,
+  terms,
+  creditCard,
+  transactions,
 };
