@@ -1,21 +1,17 @@
-import { View, Text, Pressable, TextInput, Modal, Image, ImageBackground, Animated, Dimensions } from 'react-native'
+import { View, Text, Pressable, TextInput, Modal, Image, ImageBackground, Animated, Dimensions } from 'react-native';
 import { styled } from 'nativewind';
-import React, { useState, useEffect, useRef } from 'react'
-import { onAuthStateChanged, User, signInWithEmailAndPassword } from 'firebase/auth';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useRouter } from 'expo-router';
 import icons from '../../constants/icons';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import InterestModal from './interest';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { AuthContext } from '../../src/auth/AuthContext'; 
+import { AuthContextProps } from '@/types/interfaces';
 
 
 const StyledPressable = styled(Pressable)
 const StyledView = styled(View)
 const StyledText = styled(Text)
 const StyledImage = styled(Image)
-const StyledSafeAreaView = styled(SafeAreaView)
 const StyledTextInput = styled(TextInput)
 const StyledImageBackground = styled(ImageBackground)
 
@@ -29,8 +25,10 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-const signIn = () => {
-  const [user, setUser] = useState<User | null>(null);
+const SignIn = () => {
+  const authContext = useContext(AuthContext) as AuthContextProps;
+  const { user, signIn, signUp } = authContext;
+
   const [email, setEmail] = useState('');
   const [visible, setVisible] = useState(true);
   const [password, setPassword] = useState('');
@@ -39,6 +37,11 @@ const signIn = () => {
   const [isSignUp, setIsSignUp] = useState(false); // Tracks the current screen: Sign In or Sign Up
   const animatedValue = useRef(new Animated.Value(0)).current;
   const animatedSignUp = useRef(new Animated.Value(0)).current;
+
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [username, setUsername] = useState('');
+  const [interests, setInterests] = useState<string[]>([]);
 
   // Automatically switch images at a set interval (e.g., every 3 seconds)
   useEffect(() => {
@@ -54,17 +57,23 @@ const signIn = () => {
 
   const handleSignIn = async () => {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Optionally store the user's token or UID in AsyncStorage for future use
-      const idToken = await user.getIdToken();
-      await AsyncStorage.setItem('userToken', idToken);
-
+      await signIn(email, password); 
       setError(null);
-      router.back()
-    } catch (err:any) {
+      setVisible(false);
+      router.push('/(tabs)/home');
+    } catch (err: any) {
       setError(err.message);
+    }
+  };
+
+  const handleSignUp = async () => {
+    try {
+      await signUp(email, password, firstName, lastName, username, interests); // Use signUp from AuthContext
+      setVisible(false);
+      router.push('/(tabs)/home');
+    } catch (error: any) {
+      console.error('Error signing up:', error.message);
+      setError(error.message);
     }
   };
 
@@ -79,49 +88,11 @@ const signIn = () => {
     }).start(() => setIsSignUp(toSignUp)); // After the animation, update state
   };
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [username, setUsername] = useState('');
-  const [interests, setInterests] = useState<String[]>([]);
-
   const [currentPage, setCurrentPage] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [interestModalVisible, setInterestModalVisible] = useState(false);
-  const auth = getAuth(); 
 
   const pages = [0, 1, 2, 3];
-
-  const handleSignUp = async () => {
-    try {
-      const response = await fetch(`${API_URL}/register-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          username: username,
-          password: password,
-          interests: interests
-        }),
-      });
-  
-      const data = await response.json();
-      if (response.ok) {
-        await AsyncStorage.setItem('userToken', data.token);
-
-        setVisible(false);
-        router.push('/(tabs)/home');
-
-      } else {
-        console.error('Error:', data.error);
-      }
-    } catch (error) {
-      console.error('Network error:', error);
-    }
-  }
 
   const handleScroll = (pageIndex: number) => {
     Animated.timing(animatedSignUp, {
@@ -359,4 +330,4 @@ const signIn = () => {
   );
 }
 
-export default signIn
+export default SignIn

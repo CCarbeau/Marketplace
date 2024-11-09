@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, Image, Pressable, ImageBackground, FlatList, Dimensions, Alert, Animated, Platform, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { styled } from 'nativewind';
@@ -9,8 +9,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Modal from 'react-native-modal';
 import ListingPage from '@/app/listing/[id]';
 import RenderBottomBar from '@/app/listing/BottomBar';
-import { Listing } from '@/types/interfaces';
+import { Listing, AuthContextProps } from '@/types/interfaces';
 import { handleComment, handleFollow, handleLike, handleProfile } from '@/app/listing/userInputFunctions';
+import { AuthContext } from '@/src/auth/AuthContext';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -33,36 +34,11 @@ const Index = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [networkError, setNetworkError] = useState(false);
   const [modalVisible, setModalVisible] = useState<{ [key: string]: boolean }>({});
+  const { user } = useContext(AuthContext) as AuthContextProps; 
 
-  const [ signedIn, setSignedIn ] = useState(false);
-  const auth = getAuth();
 
   useEffect(() => {
     fetchRandomListing();  // Initial fetch
-  }, []);
-
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      const token = await AsyncStorage.getItem('userToken');
-      if (token) {
-        // Sign in the user with the token (Firebase client now tracks the session)
-        await signInWithCustomToken(auth, token);
-      }
-    };
-
-    checkAuthStatus();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setSignedIn(true);
-      } else {
-        setSignedIn(false);
-      }
-    });
-
-    return () => unsubscribe();
   }, []);
   
   const fetchRandomListing = async () => {
@@ -151,7 +127,7 @@ const Index = () => {
           </StyledView>
 
           <StyledView className='absolute mt-80 right-4 z-10 shadow-sm shadow-darkGray'>
-            <Pressable onPress={() => handleLike(item.id, likes, signedIn, setIsLiked, setListings, isLiked, router)}>
+            <Pressable onPress={() => handleLike(item.id, likes, Boolean(user), setIsLiked, setListings, isLiked, router)}>
               <StyledImage source={isLiked ? icons.heartFull : icons.heartEmpty} className='w-12 h-12' />
               <StyledText className='p-2 text-white text-center'>{likes}</StyledText>
             </Pressable>

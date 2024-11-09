@@ -1,3 +1,5 @@
+import { User } from "firebase/auth";
+
 export interface Listing {
     images: string[];
     title: string;
@@ -67,3 +69,11 @@ export interface Layout {
     height: number;
     width: number;
 }  
+
+export interface AuthContextProps {
+    user: User | null;
+    loading: boolean;
+    signIn: (email: string, password: string) => Promise<void>;
+    signUp: (email: string, password: string, firstName: string, lastName: string, username: string, interests: string[]) => Promise<void>;
+    logout: () => Promise<void>;
+}

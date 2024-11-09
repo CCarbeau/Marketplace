@@ -1,19 +1,15 @@
 import { View, Text, Pressable, TextInput, Modal, Image, ImageBackground, Animated, Dimensions } from 'react-native'
 import { styled } from 'nativewind';
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useContext } from 'react'
 import InterestModal from './interest';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import icons from '../../constants/icons';
-import { auth } from '../../src/auth/firebaseConfig';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { AuthContext, AuthContextProps } from '../../src/auth/AuthContext'; 
 
 const StyledPressable = styled(Pressable)
 const StyledView = styled(View)
 const StyledText = styled(Text)
 const StyledImage = styled(Image)
-const StyledSafeAreaView = styled(SafeAreaView)
 const StyledTextInput = styled(TextInput)
 const StyledImageBackground = styled(ImageBackground)
 
@@ -28,12 +24,15 @@ const images = [
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const SignUp = () => {
+  const authContext = useContext(AuthContext) as AuthContextProps;
+  const { user, signIn, signUp } = authContext;
+
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [interests, setInterests] = useState<String[]>([]);
+  const [interests, setInterests] = useState<string[]>([]);
 
   const [visible, setVisible] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,37 +46,14 @@ const SignUp = () => {
 
   const handleSignUp = async () => {
     try {
-      const response = await fetch(`${API_URL}/register-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          username: username,
-          password: password,
-          interests: interests
-        }),
-      });
-  
-      const data = await response.json();
-      if (response.ok) {
-        await AsyncStorage.setItem('userToken', data.token);
-
-        await signInWithEmailAndPassword(auth, email, password);
-
-        setVisible(false);
-        router.push('/(tabs)/home');
-
-      } else {
-        console.error('Error:', data.error);
-      }
-    } catch (error) {
-      console.error('Network error:', error);
+      await signUp(email, password, firstName, lastName, username, interests); // Use signUp from AuthContext
+      setVisible(false);
+      router.push('/(tabs)/home');
+    } catch (error: any) {
+      console.error('Error signing up:', error.message);
+      setError(error.message);
     }
-  }
+  };
 
   const handleScroll = (pageIndex: number) => {
     Animated.timing(animatedValue, {

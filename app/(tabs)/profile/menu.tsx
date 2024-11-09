@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import icons from '../../../constants/icons';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../../src/auth/firebaseConfig';
-import { useAuth } from '../../../src/auth/AuthProvider';
+import { useAuth } from '../../../src/auth/AuthContext';
 
 const StyledPressable = styled(Pressable)
 const StyledView = styled(View)
@@ -38,6 +38,7 @@ const menu = () => {
 
   const handleSignOut = async () => {
     await signOut(auth);
+    router.back();
     router.push('/(tabs)/home/(tabs)/');
   };
 

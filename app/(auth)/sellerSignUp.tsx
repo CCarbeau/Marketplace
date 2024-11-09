@@ -3,7 +3,6 @@ import { styled } from 'nativewind';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useRouter } from 'expo-router';
-import { doc, updateDoc } from 'firebase/firestore';
 import { auth } from '../../src/auth/firebaseConfig';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -20,7 +19,7 @@ const SellerSignUp = () => {
     // Fetch the Stripe onboarding link from your backend
     const fetchAccountLink = async () => {
       try {
-        const response = await fetch(`${API_URL}/create-stripe-account`, {
+        const response = await fetch(`${API_URL}/stripe/create-stripe-account`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -89,7 +88,7 @@ const styles = StyleSheet.create({
 
 const updateAccount = async () => {
   try {
-    const response = await fetch(`${API_URL}/newSeller`, {
+    const response = await fetch(`${API_URL}/sellers/register-seller`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

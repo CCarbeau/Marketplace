@@ -3,46 +3,53 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
 export const registerUser = async (req, res) => {
+  const { uid, email, firstName, lastName, username, interests } = req.body;
+
   try {
-    const { firstName, lastName, email, username, password, interests } = req.body;
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-    const uid = user.uid;
+    // Verify the Firebase token
+    const idToken = req.headers.authorization?.split(' ')[1];
+    const decodedToken = await getAuth().verifyIdToken(idToken);
+    if (decodedToken.uid !== uid) {
+      return res.status(403).send({ error: 'Unauthorized request.' });
+    }
 
+    // Create the user data object for Firestore
     const userData = {
-        seller: false,
-        firstName: firstName,
-        lastName: lastName,
-        username: username,
-        interests: interests,
-        address: {},
-        payment: {},
-        collection: [],
-        listings: [],
-        drafts: [],
-        purchases: [],
-        bids: [],
-        offers: [],
-        sales: [],
-        following: [],
-        numberOfFollowing: 0,
-        followers: [],
-        numberOfFollowers: 0,
-        reviews: [],
-        liked: [],
-        recentSearches: [],
-        balance: 0,
-        pfp: '',
-        rating: 0,
-        itemsSold: 0,
-      };
+      seller: false,
+      firstName,
+      lastName,
+      username,
+      email,
+      interests,
+      address: {},
+      payment: {},
+      collection: [],
+      listings: [],
+      drafts: [],
+      purchases: [],
+      bids: [],
+      offers: [],
+      sales: [],
+      following: [],
+      followers: [],
+      numberOfFollowing: 0,
+      numberOfFollowers: 0,
+      reviews: [],
+      liked: [],
+      recentSearches: [],
+      balance: 0,
+      pfp: '',
+      rating: 0,
+      itemsSold: 0,
+    };
 
+    // Store the user data in Firestore
     await setDoc(doc(db, 'userData', uid), userData);
-    const idToken = await user.getIdToken();
 
-    res.status(201).send({ uid, token: idToken });
+    res.status(201).send({ message: 'User metadata saved successfully' });
   } catch (error) {
-    res.status(400).send({ error: error.message });
+    console.error('Error registering user metadata:', error);
+    res.status(500).send({ error: 'Failed to save user metadata.' });
   }
 };
 

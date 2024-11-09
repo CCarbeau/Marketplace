@@ -1,12 +1,12 @@
 import { View, Text, Pressable, Image } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useContext } from 'react'
 import { styled } from 'nativewind'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { getAuth, onAuthStateChanged} from 'firebase/auth';
+import { AuthContext } from '../../../src/auth/AuthContext';
+import { AuthContextProps } from '@/types/interfaces'
 
 import sellerExample from '../../../assets/images/sellerExample.png';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../src/auth/firebaseConfig';
 
@@ -17,47 +17,29 @@ const StyledSafeAreaView = styled(SafeAreaView)
 const StyledImage = styled(Image)
 
 const sell = () => {
-  const auth = getAuth();
   const router = useRouter();
 
-  const [signedIn, setSignedIn] = useState(false);
-  const [isSeller, setIsSeller] = useState(true);
+  const { user } = useContext(AuthContext) as AuthContextProps;
 
+  const [isSeller, setIsSeller] = useState(false);
+
+  
   useEffect(() => {
-    // Listen for changes in the user's auth state
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const fetchUserProfile = async () => {
       if (user) {
-
-        // Optionally, store the user's ID token in AsyncStorage if needed for backend API requests
-        const idToken = await user.getIdToken();
-        await AsyncStorage.setItem('userToken', idToken);
-
-        setSignedIn(true); // Update the local state to reflect that the user is signed in
-        fetchUserProfile();
-      } else {
-        // No user is signed in
-        setSignedIn(false); // Update the state to reflect that the user is not signed in
+        const userDoc = await getDoc(doc(db, 'userData', user.uid));
+  
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setIsSeller(userData.seller); // Access seller status
+        }
       }
-    });
+    };
 
-    // Clean up the listener on component unmount
-    return () => unsubscribe();
-  }, []);
+    fetchUserProfile();
+  },[user]);
 
-  const fetchUserProfile = async () => {
-    const user = auth.currentUser;
-
-    if (user) {
-      const userDoc = await getDoc(doc(db, 'userData', user.uid));
-
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        setIsSeller(userData.seller); // Access seller status
-      }
-    }
-  };
-
-  if(!signedIn){
+  if(!user){
     return (
       <StyledView className='flex-1 w-full h-full'>
         <StyledView className='flex mt-16 h-96'>

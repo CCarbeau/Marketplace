@@ -1,16 +1,15 @@
 import { View, Text, Pressable, Image, Alert, ScrollView, ImageBackground, Animated, useWindowDimensions, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { styled } from 'nativewind';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { signOut, getAuth, onAuthStateChanged, User, signInWithCustomToken } from 'firebase/auth';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode, JwtPayload } from 'jwt-decode';
-import { Listing, Seller, Review } from '@/types/interfaces';
+import { Listing, Seller, Review, AuthContextProps } from '@/types/interfaces';
+import { AuthContext } from '@/src/auth/AuthContext';
 
 
 import profileExample from '../../../assets/images/profileExample.png';
-import logo from '../../../assets/images/logo.png';
-import gunnar from '../../../assets/images/gunnar.jpg';
 import icons from '@/constants/icons'
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -28,8 +27,8 @@ interface ProfilePageProps {
 
 const ProfilePage:React.FC<ProfilePageProps> = () => {
   const router = useRouter();
-  const [signedIn, setSignedIn] = useState(false);
-  const auth = getAuth();
+  const { user } = useContext(AuthContext) as AuthContextProps;
+
   const [seller, setSeller] = useState<Seller | null>(null);
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [otherProf, setOtherProf] = useState(false);
@@ -46,97 +45,10 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
         setSellerId(paramId);
         setOtherProf(true);
       }
+    }else if(user){
+      setSellerId(user.uid);
     }
   }, [params]);
-
-  // Check stored token and initialize sellerId
-  useEffect(() => {
-    const checkStoredToken = async () => {
-      try {
-        const token = await AsyncStorage.getItem('userToken');
-        if (token) {
-          const isValid = await verifyTokenWithBackend(token);
-          if (isValid) {
-            console.log('true');
-            setSignedIn(true);
-            const decodedToken = jwtDecode<JwtPayload & { user_id?: string }>(token);
-            const userId = decodedToken.user_id || decodedToken.sub;
-            if (userId) {
-              setSellerId(userId);
-            }
-          } else {
-            console.log('false');
-            await handleExpiredOrInvalidToken(token);
-          }
-        }
-      } catch (error) {
-        console.error('Error checking stored token:', error);
-      }
-    };
-
-    const handleExpiredOrInvalidToken = async (token: string) => {
-      const decodedToken = jwtDecode<JwtPayload & { exp?: number }>(token);
-      const currentTime = Math.floor(Date.now() / 1000);
-
-      if (decodedToken.exp && decodedToken.exp < currentTime) {
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          try {
-            const newToken = await currentUser.getIdToken(true);
-            await AsyncStorage.removeItem('userToken');
-            await AsyncStorage.setItem('userToken', newToken);
-            setSignedIn(true);
-          } catch (refreshError) {
-            console.error('Error refreshing token:', refreshError);
-            await AsyncStorage.removeItem('userToken');
-            setSignedIn(false);
-          }
-        } else {
-          await AsyncStorage.removeItem('userToken');
-          setSignedIn(false);
-        }
-      } else {
-        await AsyncStorage.removeItem('userToken');
-        setSignedIn(false);
-      }
-    };
-
-    const verifyTokenWithBackend = async (token: string): Promise<boolean> => {
-      try {
-        const response = await fetch(`${API_URL}/auth/verify-token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
-        });
-        if (!response.ok) {
-          throw new Error('Token verification failed');
-        }
-        const data = await response.json();
-        return data.valid;
-      } catch (error) {
-        console.error('Error verifying token with backend:', error);
-        return false;
-      }
-    };
-
-    if(!otherProf){
-      checkStoredToken();
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user && !otherProf) {
-        const idToken = await user.getIdToken();
-        await AsyncStorage.setItem('userToken', idToken);
-        setSignedIn(true);
-        setSellerId(user.uid);
-      } else {
-        setSignedIn(false);
-        setSellerId(null);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [refreshing]);
 
   // Fetch seller when sellerId changes
   useEffect(() => {
@@ -163,19 +75,6 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
     } finally {
       setRefreshing(false);
       setLoading(false);
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await auth.signOut();
-      await AsyncStorage.removeItem('userToken');
-      setSignedIn(false);
-      setSellerId(null);
-      Alert.alert('Success', 'You have been signed out.');
-      router.replace('/(tabs)/home');
-    } catch (error) {
-      Alert.alert('Sign Out Error', 'Failed to sign out. Please try again.');
     }
   };
 
@@ -381,7 +280,7 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
     );
   }
   
-  if (!signedIn) {
+  if (!user) {
     return (
       <StyledView className='flex-1 w-full h-full'>
         <StyledView className='flex mt-16 h-96'>
