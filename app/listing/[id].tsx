@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Image, Pressable, ImageBackground, Animated, ScrollView, ActivityIndicator, TouchableHighlight, useWindowDimensions, Alert, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { styled } from 'nativewind';
-import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import icons from '../../constants/icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +9,8 @@ import SellerTab from './sellerTab';
 import RenderRelatedListings from './relatedListings';
 import RenderBottomBar from './BottomBar';
 import { Listing, Seller, Review } from '@/types/interfaces';
+import { fetchRandomListings, fetchReviews, fetchSeller } from '../functions/fetch';
+import { handleLike, handleReport } from '../functions/userInput';
 
 const StyledPressable = styled(Pressable);
 const StyledImage = styled(Image);
@@ -67,6 +68,8 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                 const data = await response.json();
                 const listing = data.listing as Listing
 
+                console.log(listing);
+
                 setListing(listing);
                 
                 if(propId){setModal(true);}
@@ -120,60 +123,55 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
     const [seller, setSeller] = useState<Seller | null>(null);
 
     useEffect(() => {
-        const fetchSeller = async () => {
-            if (listing){
-                try{
-                    setLoading(true);
-                    const response = await fetch(`${API_URL}/sellers/fetch-seller?id=${listing.ownerUID}`, {
-                        method: 'GET',
-                    });
-    
-                    if (!response.ok) {
-                        throw new Error(`Error fetching seller: ${response.status}`);
-                    }
-    
-                    const data = await response.json();
-                    setSeller(data.seller)
-                }catch(error){
-                    console.log('Cannont fetch seller', error)
-                }finally{
-                    setRefreshing(false);
-                    setLoading(false);
-                }
+        if (listing) {
+          const fetchSellerData = async () => {
+            try {
+              setLoading(true);
+              const ret = await fetchSeller(listing.ownerUID); 
+              if (ret) {
+                setSeller(ret); 
+              } else {
+                console.log("Seller data is null or undefined");
+              }
+            } catch (error) {
+              console.log('Cannot fetch seller', error);
+            } finally {
+              setRefreshing(false);
+              setLoading(false);
             }
+          };
+      
+          fetchSellerData(); // Call the async function
         }
-        
-        fetchSeller();
-    },[listing, refreshing]) 
+      }, [listing, refreshing]);
 
     // Fetch Seller's Reviews
     const [reviews, setReviews] = useState<Review []>([]);
     
     useEffect(() => {
-        const fetchReviews = async () => {
-          if (listing && listing.ownerUID) {
-            try {
+        const fetchReviewsData = async () => {
+            if(listing?.ownerUID){
+              try{
                 setLoading(true);
-                const response = await fetch(`${API_URL}/listings/fetch-reviews?sellerId=${listing.ownerUID}`, {
-                    method: 'GET',
-                });
-        
-                if (!response.ok) {
-                    throw new Error(`Error fetching reviews: ${response.status}`);
+      
+                const ret = await fetchReviews(listing.ownerUID);
+      
+                if (ret) {
+                  setReviews(ret); // Only set seller if data is returned
+                } else {
+                  console.log("Seller data is null or undefined");
                 }
-        
-                const data = await response.json();
-                setReviews(data.reviews || []); // Set the reviews state with the fetched data
-            } catch (error) {
-                console.error('Cannot fetch reviews:', error);
-            } finally {
+      
+              }catch (error){
+                console.log('Error fetching reviews', error);
+              }finally{
                 setRefreshing(false);
-                setLoading(false); // Stop the loading state whether successful or not
+                setLoading(false);
+              }
             }
           }
-        };
-    
-        fetchReviews();
+      
+          fetchReviewsData();
       }, [listing, refreshing]);
 
 
@@ -182,27 +180,18 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
 
     useEffect(() => {
         const fetchOtherListings = async () => {
-            if (listing && listing.ownerUID) {
-                try {
-                    setLoading(true);
-                    const response = await fetch(`${API_URL}/listings/fetch-random-listings-by-owner?numListings=10&sellerId=${listing.ownerUID}&listingId=${id}`, {
-                        method: 'GET',
-                    });
-        
-                    if (!response.ok) {
-                        
-                        throw new Error(`Error fetching other listings: ${response.status}`);
-                    }
-        
-                    const data = await response.json();
-                    
-                    setOtherListings(data.listings || []); 
-                } catch (error) {
-                    console.error('Cannot fetch other listings:', error);
-                } finally {
-                    setRefreshing(false);
-                    setLoading(false); // Stop the loading state whether successful or not
+            try{
+                setLoading(true);
+                
+                const ret = await fetchRandomListings(listing?.ownerUID, undefined, id, 10, true);
+
+                if(ret){
+                    setOtherListings(ret);
+                }else{
+                    console.log('Other listings returned null')
                 }
+            }catch(error){
+                console.error('Error fetching other listings', error);
             }
         }
 
@@ -216,25 +205,18 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
 
     useEffect(()=> {
         const fetchRelatedListings = async () => {
-            if (listing) {
+            if (listing && listing.category) {
                 try {
                     setLoading(true);
-                    const response = await fetch(`${API_URL}/listings/fetch-random-listings-by-category?numListings=10&category=${listing.category}&listingId=${id}`, {
-                        method: 'GET',
-                    });
-        
-                    if (!response.ok) {
-                        throw new Error(`Error fetching related listings: ${response.status}`);
+                    const ret = await fetchRandomListings(undefined, listing.category, id, 10, true);
+
+                    if(ret){
+                        setRelatedListings(ret);
+                    }else{
+                        console.log('Related listings returned is null')
                     }
-        
-                    const data = await response.json();
-                    
-                    setRelatedListings(data.listings || []); 
-                } catch (error) {
-                    console.error('Cannot fetch related listings:', error);
-                } finally {
-                    setRefreshing(false);
-                    setLoading(false); // Stop the loading state whether successful or not
+                }catch(error){
+                    console.error('Cannot fetch related listings', error);
                 }
             }
         }
@@ -261,36 +243,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
           setRefreshing(false);
         }, 2000);
     }, []);
-
-    
-    {/* Handling user actions functions */}
-
-    // Handle liking the main listing
-    const handleLike = async (docId: string, currentLikes: number) => {
-        if (signedIn) {
-            try {
-                setIsLiked(!isLiked);
-                const newLikes = isLiked ? currentLikes - 1 : currentLikes + 1;
-                const docRef = doc(db, "listings", docId.toString());
-                
-                await updateDoc(docRef, { likes: newLikes });
-        
-                // Update the local state to reflect the new like count
-                setListing(prevListing =>
-                    prevListing ? { ...prevListing, likes: newLikes } : prevListing
-                );
-            } catch (error) {
-                console.error("Error updating likes:", error);
-            }
-        } else {
-            router.push('/(auth)/')
-        }
-    };
-
-    const handleReport = () => {
-
-    }
-
+   
 
     {/* Time Calculation Functions */}
 
@@ -540,7 +493,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                         
                             {/* Listing Image and Buttons */}
                             <StyledImageBackground source={{ uri: listing.images[0] }} className='h-[496]' imageStyle={{borderTopLeftRadius:16, borderTopRightRadius:16}}>
-                                <StyledPressable onPress={() => { handleLike(id, listing.likes) }} className='flex-row absolute bg-darkGray right-4 bottom-2 rounded-full'>
+                                <StyledPressable onPress={() => { handleLike(listing.id, listing.likes, signedIn, setIsLiked, null, setListing,isLiked, router) }} className='flex-row absolute bg-darkGray right-4 bottom-2 rounded-full'>
                                     <StyledText className='text-white pl-2 text-xl font-bold self-center'>{listing.likes}</StyledText>
                                     {!isLiked ? (
                                         <StyledImage source={icons.heartEmpty} className='w-6 h-6 m-2' style={{tintColor:'#FF5757'}}/>
@@ -649,7 +602,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                                     <StyledImage source={icons.carrot} style={{transform: [{ rotate: '270deg' }]}} className='ml-1 w-5 h-5'/>
                                 </StyledPressable>
                             </SafeAreaView>
-                            <StyledPressable onPress={() => { handleLike(id, listing.likes) }} className='flex-row absolute bg-darkGray right-4 bottom-2 rounded-full'>
+                            <StyledPressable onPress={() => { handleLike(listing.id, listing.likes, signedIn, setIsLiked, null, setListing,isLiked, router) }} className='flex-row absolute bg-darkGray right-4 bottom-2 rounded-full'>
                                 <StyledText className='text-white pl-2 text-xl font-bold self-center'>{listing.likes}</StyledText>
                                 {!isLiked ? (
                                     <StyledImage source={icons.heartEmpty} className='w-6 h-6 m-2' style={{tintColor:'#FF5757'}}/>

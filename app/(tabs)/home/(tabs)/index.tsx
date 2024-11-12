@@ -4,14 +4,13 @@ import { useRouter } from 'expo-router';
 import { styled } from 'nativewind';
 import { LinearGradient } from 'expo-linear-gradient';
 import icons from '../../../../constants/icons';
-import { getAuth, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Modal from 'react-native-modal';
 import ListingPage from '@/app/listing/[id]';
 import RenderBottomBar from '@/app/listing/BottomBar';
 import { Listing, AuthContextProps } from '@/types/interfaces';
-import { handleComment, handleFollow, handleLike, handleProfile } from '@/app/listing/userInputFunctions';
+import { handleComment, handleFollow, handleLike, handleProfile } from '@/app/functions/userInput';
 import { AuthContext } from '@/src/auth/AuthContext';
+import { fetchRandomListings, fetchSeller } from '@/app/functions/fetch';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -34,40 +33,47 @@ const Index = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [networkError, setNetworkError] = useState(false);
   const [modalVisible, setModalVisible] = useState<{ [key: string]: boolean }>({});
-  const { user } = useContext(AuthContext) as AuthContextProps; 
+  const { user, profile } = useContext(AuthContext) as AuthContextProps; 
 
 
   useEffect(() => {
-    fetchRandomListing();  // Initial fetch
+    fetchRandomListing(); // Initial fetch
   }, []);
   
   const fetchRandomListing = async () => {
     try {
-      if(listings.length === 0){
+      // Set loading state if listings array is empty initially
+      if (listings.length === 0) {
         setLoading(true);
       }
-
-      const response = await fetch(`${API_URL}/listings/fetch-random-listings?numListings=10`, {
-        method: 'GET',
-      });
-
-      if(!response.ok){
-        throw new Error(`Error fetching listings: ${response.status}`);
-      }
-
-      const data = await response.json();
-                    
-      setListings((prevListings) => {
-        const existingIds = new Set(prevListings.map((listing) => listing.id));
-        const newUniqueListings = data.listings.filter(
-          (listing: Listing) => !existingIds.has(listing.id)
-        );
-        return [...prevListings, ...newUniqueListings];
-      });
+  
+      const ret = await fetchRandomListings(undefined, undefined, undefined, 10, undefined);
       
+      if(ret){
+        // Fetch sellers for each listing concurrently
+        const listingsWithSellers = await Promise.all(
+          ret.map(async (listing: Listing) => {
+            if (listing.ownerUID){
+              const seller = await fetchSeller(listing.ownerUID);
+              return { ...listing, seller }; 
+            }
+          })
+        );
+      
+  
+        // Set new listings by filtering out duplicates
+        setListings((prevListings) => {
+          const existingIds = new Set(prevListings.map((listing) => listing.id));
+          const newUniqueListings = listingsWithSellers.filter(
+            (listing) => !existingIds.has(listing.id)
+          );
+          return [...prevListings, ...newUniqueListings];
+        });
+      }
+  
     } catch (error: unknown) {
-      console.log(error);
-
+      console.error(error);
+  
       if (error instanceof Error) {
         if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
           setNetworkError(true);
@@ -77,11 +83,11 @@ const Index = () => {
       } else {
         console.error("An unexpected error occurred:", error);
       }
-
+  
     } finally {
-      setLoading(false);
+      setLoading(false); 
     }
-  };
+  };  
 
   const handleLoadMore = () => {
     fetchRandomListing();
@@ -127,7 +133,7 @@ const Index = () => {
           </StyledView>
 
           <StyledView className='absolute mt-80 right-4 z-10 shadow-sm shadow-darkGray'>
-            <Pressable onPress={() => handleLike(item.id, likes, Boolean(user), setIsLiked, setListings, isLiked, router)}>
+            <Pressable onPress={() => handleLike(item.id, likes, Boolean(user), setIsLiked, setListings, null, isLiked, router)}>
               <StyledImage source={isLiked ? icons.heartFull : icons.heartEmpty} className='w-12 h-12' />
               <StyledText className='p-2 text-white text-center'>{likes}</StyledText>
             </Pressable>
@@ -137,12 +143,15 @@ const Index = () => {
             </Pressable>
 
             <Pressable onPress={handleProfile}>
-              <StyledImage source={icons.circle} className='mt-6 h-12 w-12'/>
+              <StyledImage source={{uri: item.seller.pfp}} className='mt-6 h-12 w-12 rounded-full border'/>
             </Pressable>
 
-            <StyledPressable style={{ marginTop: 4, borderColor: 'white', borderWidth: 2, borderRadius: 16 }} onPress={handleFollow}>
-              <StyledText className='text-white text-center'>ADD</StyledText>
-            </StyledPressable>
+            
+            {user?.uid !== item.ownerUID && !profile?.following.includes(item.ownerUID ?? '') && (
+              <StyledPressable style={{ marginTop: 4, borderColor: 'white', borderWidth: 2, borderRadius: 16 }} onPress={handleFollow}>
+                <StyledText className='text-white text-center'>ADD</StyledText>
+              </StyledPressable>
+            )}
           </StyledView>
 
           <StyledView className='absolute bottom-0 h-2/5 w-full inset-x-0'>

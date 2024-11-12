@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from './firebaseConfig';
-import { AuthContextProps } from '@/types/interfaces';
+import { AuthContextProps, ActiveUser } from '@/types/interfaces';
 
 const API_URL = 'http://localhost:5000';
 
@@ -9,17 +9,45 @@ export const AuthContext = createContext< AuthContextProps | undefined>(undefine
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
+    const [profile, setProfile] = useState<ActiveUser | null>(null);
     const [loading, setLoading] = useState(true);
 
     // Monitor authentication state
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
-            setLoading(false);
-        });
-        
-        return () => unsubscribe();
+      const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        setUser(currentUser);
+        setLoading(true);
+    
+        if (currentUser) {
+          await fetchUserProfile(currentUser.uid);  // Only call when user is not null
+        } else {
+          setProfile(null);
+        }
+    
+        setLoading(false);
+      });
+    
+      return () => unsubscribe();
     }, []);
+    
+
+    const fetchUserProfile = async (uid: string) => {
+      try{
+        const response = await fetch(`${API_URL}/auth/fetch-active-user/?id=${uid}`, {
+          method: 'GET',
+        })
+
+        if(!response.ok){
+          throw new Error(`Error fetching active user ${response.status}`)
+        }
+
+        const data = await response.json();
+
+        setProfile(data);
+      }catch (error){
+        console.log('Error fetching active user', error)
+      }
+    }
 
     // Sign in
     const signIn = async (email: string, password: string) => {
@@ -96,7 +124,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, logout }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, logout }}>
       {children}
     </AuthContext.Provider>
   );

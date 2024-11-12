@@ -29,7 +29,7 @@ const RenderReviews: React.FC<RenderReviewsProps> = ({ reviews, seller, handlePr
                 <StyledImage source={icons.profile} className="w-10 h-10" />
               )}
               <StyledView className='ml-1'>
-                <StyledText className='text-lg'>{seller.username}</StyledText>
+                <StyledText className='font-bold'>{seller.username}</StyledText>
                 <StyledText className='text-xs mb-1'>{new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}</StyledText>
               </StyledView>
             </StyledView>

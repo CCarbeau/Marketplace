@@ -30,6 +30,7 @@ import question from '..//assets/icons/question.png'
 import terms from '..//assets/icons/terms.png'
 import creditCard from '..//assets/icons/creditCard.png'
 import transactions from '..//assets/icons/transactions.png'
+import bell from '..//assets/icons/bell.png'
 
 
 export default {
@@ -65,4 +66,5 @@ export default {
   terms,
   creditCard,
   transactions,
+  bell,
 };

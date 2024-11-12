@@ -1,10 +1,7 @@
 import { View, Text, Pressable, Image, Alert, ScrollView, ImageBackground, Animated, useWindowDimensions, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { styled } from 'nativewind';
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { signOut, getAuth, onAuthStateChanged, User, signInWithCustomToken } from 'firebase/auth';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { jwtDecode, JwtPayload } from 'jwt-decode';
 import { Listing, Seller, Review, AuthContextProps } from '@/types/interfaces';
 import { AuthContext } from '@/src/auth/AuthContext';
 
@@ -12,6 +9,8 @@ import { AuthContext } from '@/src/auth/AuthContext';
 import profileExample from '../../../assets/images/profileExample.png';
 import icons from '@/constants/icons'
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { handleFollow } from '@/app/functions/userInput';
+import { fetchReviews, fetchSeller } from '@/app/functions/fetch';
 
 const StyledPressable = styled(Pressable);
 const StyledText = styled(Text);
@@ -27,7 +26,7 @@ interface ProfilePageProps {
 
 const ProfilePage:React.FC<ProfilePageProps> = () => {
   const router = useRouter();
-  const { user } = useContext(AuthContext) as AuthContextProps;
+  const { user, profile } = useContext(AuthContext) as AuthContextProps;
 
   const [seller, setSeller] = useState<Seller | null>(null);
   const [sellerId, setSellerId] = useState<string | null>(null);
@@ -37,46 +36,32 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
   const params = useLocalSearchParams();
   const layout = useWindowDimensions();
 
-  // Check params for sellerId
   useEffect(() => {
-    if (params.id) {
-      const paramId = Array.isArray(params.id) ? params.id[0] : params.id;
-      if (paramId !== '[id].tsx') {
-        setSellerId(paramId);
-        setOtherProf(true);
+    const fetchSellerData = async () => {
+      if (params.id) {
+        const paramId = Array.isArray(params.id) ? params.id[0] : params.id;
+        if (paramId !== '[id].tsx') {
+          setSellerId(paramId);
+          setOtherProf(true);
+          setLoading(true);
+          try {
+            const fetchedSeller = await fetchSeller(paramId);
+            setSeller(fetchedSeller);
+          } catch (error) {
+            console.error('Error fetching seller:', error);
+          } finally {
+            setLoading(false);
+          }
+        }
+      } else if (user && profile) {
+        
+        setSellerId(user.uid);
+        setSeller(profile as Seller); 
       }
-    }else if(user){
-      setSellerId(user.uid);
-    }
-  }, [params]);
+    };
 
-  // Fetch seller when sellerId changes
-  useEffect(() => {
-    if (sellerId) {
-      fetchSeller();
-    }
-  }, [sellerId, refreshing]);
-
-  const fetchSeller = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_URL}/sellers/fetch-seller?id=${sellerId}`, {
-        method: 'GET',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error fetching seller: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setSeller(data.seller);
-    } catch (error) {
-      console.log('Cannot fetch seller', error);
-    } finally {
-      setRefreshing(false);
-      setLoading(false);
-    }
-  };
+    fetchSellerData();
+  }, [params, refreshing, user, profile]);
 
   const [fontSize, setFontSize] = useState(32); // Default font size (4xl equivalent)
 
@@ -190,21 +175,18 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
 
     fetchSoldListings();
 
-    const fetchReviews = async () => {
+    const fetchReviewsData = async () => {
       if(sellerId){
         try{
           setLoading(true);
 
-          const response = await fetch(`${API_URL}/listings/fetch-reviews?sellerId=${sellerId}`, {
-            method:'GET',
-          })
+          const ret = await fetchReviews(sellerId);
 
-          if(!response.ok){
-            throw new Error(`Error fetching reviews: ${response.status}`);
+          if (ret) {
+            setReviews(ret); // Only set seller if data is returned
+          } else {
+            console.log("Seller data is null or undefined");
           }
-
-          const data = await response.json();
-          setReviews(data.reviews);
 
         }catch (error){
           console.log('Error fetching reviews', error);
@@ -215,7 +197,7 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
       }
     }
 
-    fetchReviews();
+    fetchReviewsData();
     
   }, [sellerId, refreshing])
 
@@ -254,7 +236,7 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
                   <StyledImage source={icons.profile} className="w-10 h-10" />
                 )}
                 <StyledView className='ml-1'>
-                  <StyledText className=''>{item.reviewerUsername}</StyledText>
+                  <StyledText className='font-bold'>{item.reviewerUsername}</StyledText>
                   <StyledText className='text-xs mb-1'>{new Date(item.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}</StyledText>
                 </StyledView>
               </StyledView>
@@ -334,20 +316,27 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
       <StyledView className='w-full h-full bg-white'>
         <StyledView className='h-48'>
           <StyledImageBackground source={{uri: seller?.banner}} className='w-full bg-primary h-full justify-end'>
-            <SafeAreaView>
-              <StyledPressable className='absolute top-2 right-4' onPress={() => {router.push('/(tabs)/profile/menu')}}>
-                <StyledImage source={icons.menu} className='w-6 h-6'/>
-              </StyledPressable>
-            </SafeAreaView>
-            <StyledView className='flex-row justify-between items-center ml-2 mr-4 h-12'>
-              <StyledText className='text-white font-bold flex-1 shadow-sm shadow-darkGray ml-2' style={{ fontSize }}>
-                {username}
-              </StyledText>
-              <StyledView className='flex-row rounded-3xl bg-darkGray pl-2 pr-2 pt-1 pb-1 items-center justify-center'>
-                <StyledText className='text-xl font-bold text-white'>{seller?.rating}</StyledText>
-                <StyledImage source={icons.star} style={{ tintColor: '#FF5757' }} className='ml-2 w-6 h-6' />
-              </StyledView>
-            </StyledView>
+            {!otherProf && (
+              <> 
+                <SafeAreaView>
+                  <StyledPressable className='absolute top-2 left-4' onPress={() => {router.push('/(tabs)/profile/notifications')}}>
+                    <StyledImage source={icons.bell} className='w-7 h-7'/>
+                  </StyledPressable>
+                  <StyledPressable className='absolute top-2 right-4' onPress={() => {router.push('/(tabs)/profile/menu')}}>
+                    <StyledImage source={icons.menu} className='w-6 h-6'/>
+                  </StyledPressable>
+                </SafeAreaView>
+                <StyledView className='flex-row justify-between items-center ml-2 mr-4 h-12'>
+                  <StyledText className='text-white font-bold flex-1 shadow-sm shadow-darkGray ml-2' style={{ fontSize }}>
+                    {username}
+                  </StyledText>
+                  <StyledView className='flex-row rounded-3xl bg-darkGray pl-2 pr-2 pt-1 pb-1 items-center justify-center'>
+                    <StyledText className='text-xl font-bold text-white'>{seller?.rating}</StyledText>
+                    <StyledImage source={icons.star} style={{ tintColor: '#FF5757' }} className='ml-2 w-6 h-6' />
+                  </StyledView>
+                </StyledView>
+              </>
+            )}
           </StyledImageBackground>
         </StyledView>
         <StyledView className='mr-2 ml-2 mb-4 rounded-xl pt-2 pl-2'>
@@ -369,12 +358,25 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
                 </StyledView>
               </StyledView>
               <StyledView className='flex-row flex-1 justify-evenly mt-3 mr-2 ml-2'>
-                <StyledPressable onPress={() => {router.push('/(tabs)/profile/edit')}}className='flex-1 justify-center items-center border rounded-xl p-2 mr-2 active:bg-gray'>
-                  <StyledText className='font-bold'>Edit Profile</StyledText>
-                </StyledPressable>
-                <StyledPressable className='flex-1 justify-center items-center bg-primary active:bg-primaryDark rounded-xl p-2'>
-                  <StyledText className='font-bold text-white'>Share Profile</StyledText>
-                </StyledPressable>
+                {!otherProf?(
+                  <>
+                    <StyledPressable onPress={() => {router.push('/(tabs)/profile/edit')}}className='flex-1 justify-center items-center border rounded-xl p-2 mr-2 active:bg-gray'>
+                      <StyledText className='font-bold'>Edit Profile</StyledText>
+                    </StyledPressable>
+                    <StyledPressable className='flex-1 justify-center items-center bg-primary active:bg-primaryDark rounded-xl p-2'>
+                      <StyledText className='font-bold text-white'>Share Profile</StyledText>
+                    </StyledPressable>
+                  </>
+                ):(
+                  <>
+                    <StyledPressable onPress={() => {handleFollow}}className='flex-1 justify-center items-center border bg-primary active:bg-primaryDark rounded-xl p-2 mr-2'>
+                      <StyledText className='font-bold'>Follow</StyledText>
+                    </StyledPressable>
+                    <StyledPressable className='flex-1 justify-center items-center rounded-xl p-2 border active:bg-gray'>
+                      <StyledText className='font-bold text-white'>Message</StyledText>
+                    </StyledPressable>
+                  </>
+                )}
               </StyledView>
             </StyledView>
           </StyledView>

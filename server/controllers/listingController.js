@@ -72,9 +72,8 @@ export const addListing = async (req, res) => {
 
 export const fetchRandomListings = async (req, res) => {
   try {
-    let { numListings } = req.query;
+    let { numListings, sellerId, category, listingId, active } = req.query;
 
-    // Default to 1 if numListings is not provided
     numListings = parseInt(numListings, 10) || 1;
 
     const randInt = Math.random();
@@ -82,22 +81,59 @@ export const fetchRandomListings = async (req, res) => {
 
     const listingsRef = db.collection('listings');
     
-    // First query using the random value
-    let querySnapshot = await listingsRef
+    let querySnapshot; 
+    if(category != 'undefined'){
+      querySnapshot = await listingsRef
+          .where('category', '==', category)
+          .where('sold','==', !Boolean(active))
+          .where('random', sortDirection, randInt)
+          .limit(parseInt(numListings, 10))
+          .get();
+    }else if (sellerId != 'undefined'){
+      querySnapshot = await listingsRef
+          .where('ownerUID', '==', sellerId)
+          .where('sold','==', !Boolean(active))
+          .where('random', sortDirection, randInt)
+          .limit(parseInt(numListings, 10))
+          .get();
+    }else{
+      querySnapshot = await listingsRef
+      .where('sold','==', !Boolean(active))
       .where('random', sortDirection, randInt)
-      .limit(numListings)
+      .limit(parseInt(numListings, 10))
       .get();
+    }
+
 
     // If no documents are found, switch direction and try again
     if (querySnapshot.empty) {
       const alternateDirection = sortDirection === '<=' ? '>=' : '<=';
-      querySnapshot = await listingsRef
+      if(category){
+        querySnapshot = await listingsRef
+            .where('category', '==', category)
+            .where('sold','==', !Boolean(active))
+            .where('random', alternateDirection, randInt)
+            .limit(parseInt(numListings, 10))
+            .get();
+      }else if (sellerId){
+        querySnapshot = await listingsRef
+            .where('ownerUID', '==', sellerId)
+            .where('sold','==', !Boolean(active))
+            .where('random', alternateDirection, randInt)
+            .limit(parseInt(numListings, 10))
+            .get();
+      }else{
+        querySnapshot = await listingsRef
+        .where('sold','==', !Boolean(active))
         .where('random', alternateDirection, randInt)
-        .limit(numListings)
+        .limit(parseInt(numListings, 10))
         .get();
+      }
     }
 
-    const listings = querySnapshot.docs.map((doc) => {
+    const listings = querySnapshot.docs
+    .filter((doc) => doc.id !== listingId)
+    .map((doc) => {
       const listing = doc.data();
       return {
         id: doc.id,
@@ -140,90 +176,6 @@ export const fetchListingById = async (req, res) => {
     } catch (error) {
         console.error('Error retrieving listing:', error);
         res.status(500).send({ error: 'Failed to retrieve listing' });
-    }
-};
-
-export const fetchRandomListingsByOwner = async (req, res) => {
-    try {
-        const { numListings, sellerId, listingId } = req.query;
-    
-        if (!sellerId) {
-          return res.status(400).send({ error: 'sellerId is required' });
-        }
-        const otherListingsRef = db.collection('listings'); // Use Firestore from firebase-admin
-        const querySnapshot = await otherListingsRef
-          .where('ownerUID', '==', sellerId)
-          .orderBy('random', 'desc')
-          .limit(parseInt(numListings, 10))
-          .get();
-    
-        const listings = querySnapshot.docs
-        .filter((doc) => doc.id !== listingId)
-        .map((doc) => {
-          const listing = doc.data()
-          const listingData = {
-            id: doc.id,
-            images: [listing.images[0]],
-            title: listing.title,
-            description: listing.description,
-            price: listing.price,
-            quantity: listing.quantity,
-            listingType: listing.listingType,
-            likes: listing.likes,
-            createdAt: listing.createdAt,
-            bids: listing.bids,
-            duration: listing.duration,
-          }
-          
-          return (listingData);
-        });
-    
-        res.status(200).send({ message: 'Other Listings retrieved successfully', listings });
-    } catch (error) {
-        console.error('Error retrieving other listings:', error);
-        res.status(500).send({ error: 'Failed to retrieve other listings' });
-    }
-};
-
-export const fetchRandomListingsByCategory = async (req, res) => {
-    try {
-        const { numListings, category, listingId } = req.query;
-    
-        if (!category) {
-          return res.status(400).send({ error: 'category is required' });
-        }
-        const relatedListingsRef = db.collection('listings'); // Use Firestore from firebase-admin
-        const querySnapshot = await relatedListingsRef
-          .where('category', '==', category)
-          .orderBy('random', 'desc')
-          .limit(parseInt(numListings, 10))
-          .get();
-    
-        const listings = querySnapshot.docs
-        .filter((doc) => doc.id !== listingId)
-        .map((doc) => {
-          const listing = doc.data()
-          const listingData = {
-            id: doc.id,
-            images: [listing.images[0]],
-            title: listing.title,
-            description: listing.description,
-            price: listing.price,
-            quantity: listing.quantity,
-            listingType: listing.listingType,
-            likes: listing.likes,
-            createdAt: listing.createdAt,
-            bids: listing.bids,
-            duration: listing.duration,
-          }
-          
-          return (listingData);
-        });
-    
-        res.status(200).send({ message: 'Related Listings retrieved successfully', listings });
-    } catch (error) {
-        console.error('Error retrieving related listings:', error);
-        res.status(500).send({ error: 'Failed to retrieve related listings' });
     }
 };
 
@@ -297,7 +249,7 @@ export const fetchReviews = async (req, res) => {
             ...reviewData,
             createdAt: reviewData.createdAt.toDate().toISOString(), // Convert Firestore Timestamp to ISO string
             reviewerPfp: userData.pfp,
-            revieverUsername: userData.username,
+            reviewerUsername: userData.username,
           };
         }));
     

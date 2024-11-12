@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes.js'
 import listingRoutes from './routes/listingRoutes.js';
 import sellerRoutes from './routes/sellerRoutes.js';
 import stripeRoutes from './routes/stripeRoutes.js'
+import userInputRoutes from './routes/userInputRoutes.js'
 
 // Express setup
 const app = express();
@@ -23,6 +24,7 @@ app.use('/auth', authRoutes);
 app.use('/listings', listingRoutes);
 app.use('/sellers', sellerRoutes);
 app.use('/stripe', stripeRoutes);
+app.use('/user-input', userInputRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

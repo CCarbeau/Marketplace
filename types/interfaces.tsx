@@ -34,6 +34,7 @@ export interface Listing {
     createdAt?: RawTimestamp;
     random?: number;
     id: string;
+    seller: Seller;
 }
   
 export interface RawTimestamp {
@@ -70,8 +71,33 @@ export interface Layout {
     width: number;
 }  
 
+export interface ActiveUser {
+    address: {}, 
+    banner: string,
+    bids: string[],
+    collection: string[],
+    description: string,
+    firstName: string, 
+    following: string[],
+    id: string,
+    itemsSold: number,
+    interests: string[],
+    lastName: string, 
+    listings: string[], 
+    name: string,
+    numberOfFollowers: number,
+    numberOfFollowing: number, 
+    payment: {},
+    pfp: string,
+    rating: number,
+    recentSearches: string[],
+    seller: boolean,
+    username: string,
+}
+
 export interface AuthContextProps {
     user: User | null;
+    profile: ActiveUser | null;
     loading: boolean;
     signIn: (email: string, password: string) => Promise<void>;
     signUp: (email: string, password: string, firstName: string, lastName: string, username: string, interests: string[]) => Promise<void>;

@@ -6,6 +6,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../../../src/auth/firebaseConfig';
 import { Listing, Seller, Layout } from '@/types/interfaces';
+import { handleLike } from '@/app/functions/userInput';
 
 const StyledPressable = styled(Pressable);
 const StyledImageBackground = styled(ImageBackground);
@@ -52,36 +53,6 @@ const RenderOtherListings: React.FC<RenderOtherListingsProps> = ({
       return acc;
     }, {} as { [key: string]: number })
   );
-
-  const toggleLike = async (listingId: string) => {
-    if(signedIn){
-        const isLiked = likedListings[listingId] || false;
-        const newLikesCount = isLiked ? likesCount[listingId] - 1 : likesCount[listingId] + 1;
-
-        try {
-        // Update the likes count in Firebase
-        const listingRef = doc(db, 'listings', listingId);
-        await updateDoc(listingRef, {
-            likes: increment(isLiked ? -1 : 1), // Increment or decrement the number of likes
-        });
-
-        // Update the local state
-        setLikedListings(prevState => ({
-            ...prevState,
-            [listingId]: !isLiked,
-        }));
-        setLikesCount(prevState => ({
-            ...prevState,
-            [listingId]: newLikesCount,
-        }));
-        } catch (error) {
-        console.error('Error updating likes:', error);
-        }
-    }else{
-        router.push('/(auth)/')
-    }
-  };
-
   
 
   return otherListings && seller ? (
@@ -105,7 +76,7 @@ const RenderOtherListings: React.FC<RenderOtherListingsProps> = ({
                 >
                   <StyledPressable
                     className='flex-row absolute bg-darkGray right-2 top-2 rounded-full'
-                    onPress={() => toggleLike(listing.id)}
+                    onPress={() => handleLike(listing.id, listing.likes, signedIn, setLikesCount, setLikedListings, null, likesCount[listing.id], router)}
                   >
                     <StyledText className='text-white pl-2 text-lg font-bold self-center'>{listing.likes}</StyledText>
                     <StyledImage
