@@ -4,9 +4,14 @@ import { db } from '../../src/auth/firebaseConfig';
 import { AuthContextProps, Listing } from "@/types/interfaces";
 import { AuthContext } from '@/src/auth/AuthContext';
 import { useContext } from "react";
+import { JumpingTransition } from "react-native-reanimated";
+import { json } from "stream/consumers";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
+
+// Need to remake to be similar to followers where it is an array of liked posts that 
+// are stored for each user 
 export const handleLike = async (
   docId: string,
   currentLikes: number,
@@ -21,22 +26,37 @@ export const handleLike = async (
     try {
       setIsLiked(!isLiked);
       const newLikes = isLiked ? currentLikes - 1 : currentLikes + 1;
-      const docRef = doc(db, 'listings', docId);
-      
-      await updateDoc(docRef, { likes: newLikes });
 
-      if(setListings){
-        // Update the local state to reflect the new like count
-        setListings(prevListings =>
-          prevListings.map(listing =>
-            listing.id === docId ? { ...listing, likes: newLikes } : listing
-          )
-        );
-      }else if(setListing){
+      const data = {
+        id: docId,
+        newLikes: newLikes,
+      }
 
+      const response = await fetch(`${API_URL}/user-input/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json', 
+        },
+        body: JSON.stringify(data),
+      })
+
+      if (!response.ok){
+        console.log('Error updating likes');
+        setIsLiked(isLiked);
+      }else{
+        if(setListings){
+          setListings(prevListings =>
+            prevListings.map(listing =>
+              listing.id === docId ? { ...listing, likes: newLikes } : listing
+            )
+          );
+        }else if(setListing){
+          setListing((prevListing) => prevListing ? { ...prevListing, likes: newLikes } : null);
+        }
       }
     } catch (error) {
       console.error('Error updating likes:', error);
+      setIsLiked(isLiked);
     }
   } else {
     router.push('/(auth)/');
@@ -55,10 +75,23 @@ export const handleFollow = async (followeeId: string) => {
   const { profile } = useContext(AuthContext) as AuthContextProps; 
 
   try{ 
+    const data = {
+      follower: profile?.id,
+      followee: followeeId,
+    }
+
     const response = await fetch(`${API_URL}/user-input/follow`, {
       method: 'POST',
-
+      headers: {
+        'Content-Type': 'application/json', 
+      },
+      body: JSON.stringify(data),
     })
+
+    if(!response.ok){
+      console.log('Error updating following');
+    }
+    
   }catch(error){
     console.error('Error following user', error);
   }
