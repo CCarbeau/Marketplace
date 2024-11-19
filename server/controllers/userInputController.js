@@ -1,16 +1,24 @@
 import { auth, db } from '../config/firebaseAdminConfig.js';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue} from 'firebase-admin/firestore';
 
 export const like = async (req, res) => {
     try {
-      const { id, newLikes } = req.body;
+      const { uid, listingId, isLike } = req.body;
   
-      if (!id || newLikes === undefined) {
-        return res.status(400).send({ error: 'Missing id or newLikes parameter' });
+      if (!uid || !listingId || !isLike === undefined) {
+        return res.status(400).send({ error: 'Missing uid or listingId or isLiked parameter' });
       }
   
-      const docRef = db.collection('listings').doc(id); 
-      await docRef.update({ likes: Number(newLikes) }); 
+      const docRef = db.collection('listings').doc(listingId); 
+      const userDocRef = db.collection('userData').doc(uid);
+
+      if(isLike){
+        await userDocRef.update({liked: FieldValue.arrayUnion(listingId)})
+        await docRef.update({ likes: FieldValue.increment(1) }); 
+      }else{
+        await userDocRef.update({liked: FieldValue.arrayRemove(listingId)})
+        await docRef.update({ likes: FieldValue.increment(-1) }); 
+      }
   
       res.status(200).send({ message: 'Successfully updated likes' });
     } catch (error) {
@@ -21,14 +29,20 @@ export const like = async (req, res) => {
 
 export const follow = async (req, res) => {
     try{
-        const { follower, followee } = req.body;
+        const { follower, followee, following } = req.body;
 
-        if(!follower || ! followee){
-            return res.status(400).send({ error: 'Missing follower or followee parameter' });
+        if(!follower || !followee ||  typeof following === 'undefined'){
+          return res.status(400).send({ error: 'Missing parameters' });
         }
 
-        const docRef = db.collection('listings').doc(follower); 
-        await docRef.update({ following: FieldValue.arrayUnion(newLikes) }); 
+        
+        const docRef = db.collection('userData').doc(follower); 
+        if(!following){
+          await docRef.update({ following: FieldValue.arrayUnion(followee) }); 
+        }else{
+          await docRef.update({ following: FieldValue.arrayRemove(followee) }); 
+        }
+        
     
         res.status(200).send({ message: 'Successfully updated likes' });
     }catch (error){

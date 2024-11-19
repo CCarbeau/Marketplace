@@ -5,10 +5,11 @@ import icons from '@/constants/icons';
 export default function Layout() {
   return (
     <Stack>
-      <Stack.Screen name="[id]" options={{ 
+      <Stack.Screen name="index" options={{ 
         headerTitle: '',
         headerShown: false,
       }} />
+
       <Stack.Screen name="edit" options={{ 
         headerTitle: 'Edit Profile',
         headerTintColor: '#FF5757',

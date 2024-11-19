@@ -8,6 +8,7 @@ export default function Layout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="listing" options={{ headerShown: false }} />
+        <Stack.Screen name="other-profile" options={{ headerShown: false }} />
       </Stack>
     </AuthProvider>
   );

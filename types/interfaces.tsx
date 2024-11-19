@@ -102,4 +102,5 @@ export interface AuthContextProps {
     signIn: (email: string, password: string) => Promise<void>;
     signUp: (email: string, password: string, firstName: string, lastName: string, username: string, interests: string[]) => Promise<void>;
     logout: () => Promise<void>;
+    updateProfile: (updatedData: Partial<ActiveUser>) => void;
 }

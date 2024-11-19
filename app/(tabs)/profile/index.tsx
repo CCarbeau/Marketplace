@@ -9,7 +9,7 @@ import { AuthContext } from '@/src/auth/AuthContext';
 import profileExample from '../../../assets/images/profileExample.png';
 import icons from '@/constants/icons'
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { handleFollow } from '@/app/functions/userInput';
+import { handleFollow, handleProfile } from '@/app/functions/userInput';
 import { fetchReviews, fetchSeller } from '@/app/functions/fetch';
 
 const StyledPressable = styled(Pressable);
@@ -61,11 +61,12 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
     };
 
     fetchSellerData();
-  }, [params, refreshing, user, profile]);
+  }, [refreshing]);
 
   const [fontSize, setFontSize] = useState(32); // Default font size (4xl equivalent)
 
   const username = seller?.username.toLocaleUpperCase(); // Replace this with your dynamic value
+  
   // Adjust font size based on username
   useEffect(() => {
     if(username){
@@ -227,7 +228,7 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
     return (
       <StyledView className='w-full items-center'>
         <StyledView className='border-2 border-darkGray rounded-2xl p-1 ml-2 mt-2' style={{width: layout.width*5/6 }}>
-          <StyledPressable className='active:bg-gray rounded-xl' onPress={() => { router.push(`/profile/${item.reviewerId}`) }}>
+          <StyledPressable className='active:bg-gray rounded-xl' onPress={() => { handleProfile(item.reviewerId, router) }}>
             <StyledView className='flex-row items-center justify-between p-1'>
               <StyledView className='flex-row items-center'>
                 {item.reviewerPfp ? (
@@ -317,26 +318,24 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
         <StyledView className='h-48'>
           <StyledImageBackground source={{uri: seller?.banner}} className='w-full bg-primary h-full justify-end'>
             {!otherProf && (
-              <> 
-                <SafeAreaView>
-                  <StyledPressable className='absolute top-2 left-4' onPress={() => {router.push('/(tabs)/profile/notifications')}}>
-                    <StyledImage source={icons.bell} className='w-7 h-7'/>
-                  </StyledPressable>
-                  <StyledPressable className='absolute top-2 right-4' onPress={() => {router.push('/(tabs)/profile/menu')}}>
-                    <StyledImage source={icons.menu} className='w-6 h-6'/>
-                  </StyledPressable>
-                </SafeAreaView>
-                <StyledView className='flex-row justify-between items-center ml-2 mr-4 h-12'>
-                  <StyledText className='text-white font-bold flex-1 shadow-sm shadow-darkGray ml-2' style={{ fontSize }}>
-                    {username}
-                  </StyledText>
-                  <StyledView className='flex-row rounded-3xl bg-darkGray pl-2 pr-2 pt-1 pb-1 items-center justify-center'>
-                    <StyledText className='text-xl font-bold text-white'>{seller?.rating}</StyledText>
-                    <StyledImage source={icons.star} style={{ tintColor: '#FF5757' }} className='ml-2 w-6 h-6' />
-                  </StyledView>
-                </StyledView>
-              </>
+              <SafeAreaView>
+                <StyledPressable className='absolute top-2 left-4' onPress={() => {router.push('/(tabs)/profile/notifications')}}>
+                  <StyledImage source={icons.bell} className='w-7 h-7'/>
+                </StyledPressable>
+                <StyledPressable className='absolute top-2 right-4' onPress={() => {router.push('/(tabs)/profile/menu')}}>
+                  <StyledImage source={icons.menu} className='w-6 h-6'/>
+                </StyledPressable>
+              </SafeAreaView>
             )}
+              <StyledView className='flex-row justify-between items-center ml-2 mr-4 h-12'>
+                <StyledText className='text-white font-bold flex-1 shadow-sm shadow-darkGray ml-2' style={{ fontSize: fontSize }}>
+                  {username}
+                </StyledText>
+                <StyledView className='flex-row rounded-3xl bg-darkGray pl-2 pr-2 pt-1 pb-1 items-center justify-center'>
+                  <StyledText className='text-xl font-bold text-white'>{seller?.rating}</StyledText>
+                  <StyledImage source={icons.star} style={{ tintColor: '#FF5757' }} className='ml-2 w-6 h-6' />
+                </StyledView>
+              </StyledView>
           </StyledImageBackground>
         </StyledView>
         <StyledView className='mr-2 ml-2 mb-4 rounded-xl pt-2 pl-2'>
@@ -369,11 +368,11 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
                   </>
                 ):(
                   <>
-                    <StyledPressable onPress={() => {handleFollow}}className='flex-1 justify-center items-center border bg-primary active:bg-primaryDark rounded-xl p-2 mr-2'>
-                      <StyledText className='font-bold'>Follow</StyledText>
+                    <StyledPressable onPress={() => {handleFollow}}className='flex-1 justify-center items-center bg-primary active:bg-primaryDark rounded-xl p-2 mr-2'>
+                      <StyledText className='font-bold text-white'>Follow</StyledText>
                     </StyledPressable>
                     <StyledPressable className='flex-1 justify-center items-center rounded-xl p-2 border active:bg-gray'>
-                      <StyledText className='font-bold text-white'>Message</StyledText>
+                      <StyledText className='font-bold'>Message</StyledText>
                     </StyledPressable>
                   </>
                 )}

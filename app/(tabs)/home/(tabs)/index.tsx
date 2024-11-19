@@ -33,7 +33,7 @@ const Index = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [networkError, setNetworkError] = useState(false);
   const [modalVisible, setModalVisible] = useState<{ [key: string]: boolean }>({});
-  const { user, profile } = useContext(AuthContext) as AuthContextProps; 
+  const { user, profile, updateProfile } = useContext(AuthContext) as AuthContextProps; 
 
 
   useEffect(() => {
@@ -133,7 +133,7 @@ const Index = () => {
           </StyledView>
 
           <StyledView className='absolute mt-80 right-4 z-10 shadow-sm shadow-darkGray'>
-            <Pressable onPress={() => handleLike(item.id, likes, Boolean(user), setIsLiked, setListings, null, isLiked, router)}>
+            <Pressable onPress={() => {handleLike(item.id, !isLiked, profile, router), setIsLiked(!isLiked)}}>
               <StyledImage source={isLiked ? icons.heartFull : icons.heartEmpty} className='w-12 h-12' />
               <StyledText className='p-2 text-white text-center'>{likes}</StyledText>
             </Pressable>
@@ -142,13 +142,13 @@ const Index = () => {
               <StyledImage source={icons.message} className="w-12 h-12" />
             </Pressable>
 
-            <Pressable onPress={handleProfile}>
+            <Pressable onPress={() => {handleProfile(item.ownerUID, router, profile)}}>
               <StyledImage source={{uri: item.seller.pfp}} className='mt-6 h-12 w-12 rounded-full border'/>
             </Pressable>
 
             
             {user?.uid !== item.ownerUID && !profile?.following.includes(item.ownerUID ?? '') && (
-              <StyledPressable style={{ marginTop: 4, borderColor: 'white', borderWidth: 2, borderRadius: 16 }} onPress={handleFollow}>
+              <StyledPressable style={{ marginTop: 4, borderColor: 'white', borderWidth: 2, borderRadius: 16 }} onPress={() => {handleFollow(item.ownerUID, false, profile, updateProfile)}}>
                 <StyledText className='text-white text-center'>ADD</StyledText>
               </StyledPressable>
             )}

@@ -30,7 +30,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return () => unsubscribe();
     }, []);
     
-
     const fetchUserProfile = async (uid: string) => {
       try{
         const response = await fetch(`${API_URL}/auth/fetch-active-user/?id=${uid}`, {
@@ -48,6 +47,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log('Error fetching active user', error)
       }
     }
+
+    const updateProfile = (updatedData: Partial<ActiveUser>) => {
+      setProfile((prevProfile) => {
+          if (!prevProfile) {
+              return null;
+          }
+
+          return { ...prevProfile, ...updatedData };
+      });
+  };
 
     // Sign in
     const signIn = async (email: string, password: string) => {
@@ -124,7 +133,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, logout }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
