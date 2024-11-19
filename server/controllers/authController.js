@@ -47,6 +47,7 @@ export const fetchActiveUser = async(req, res) => {
       interests: user.interests,
       lastName: user.lastName, 
       listings: user.listings,
+      liked: user.liked,
       name: user.name,
       numberOfFollowers: user.numberOfFollowers,
       numberOfFollowing: user.numberOfFollowing, 

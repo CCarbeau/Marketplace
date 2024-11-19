@@ -84,6 +84,7 @@ export interface ActiveUser {
     interests: string[],
     lastName: string, 
     listings: string[], 
+    liked: string[],
     name: string,
     numberOfFollowers: number,
     numberOfFollowing: number, 

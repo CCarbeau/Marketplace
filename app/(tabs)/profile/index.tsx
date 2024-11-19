@@ -30,31 +30,14 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
 
   const [seller, setSeller] = useState<Seller | null>(null);
   const [sellerId, setSellerId] = useState<string | null>(null);
-  const [otherProf, setOtherProf] = useState(false);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const params = useLocalSearchParams();
+
   const layout = useWindowDimensions();
 
   useEffect(() => {
     const fetchSellerData = async () => {
-      if (params.id) {
-        const paramId = Array.isArray(params.id) ? params.id[0] : params.id;
-        if (paramId !== '[id].tsx') {
-          setSellerId(paramId);
-          setOtherProf(true);
-          setLoading(true);
-          try {
-            const fetchedSeller = await fetchSeller(paramId);
-            setSeller(fetchedSeller);
-          } catch (error) {
-            console.error('Error fetching seller:', error);
-          } finally {
-            setLoading(false);
-          }
-        }
-      } else if (user && profile) {
-        
+      if(user){
         setSellerId(user.uid);
         setSeller(profile as Seller); 
       }
@@ -228,7 +211,7 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
     return (
       <StyledView className='w-full items-center'>
         <StyledView className='border-2 border-darkGray rounded-2xl p-1 ml-2 mt-2' style={{width: layout.width*5/6 }}>
-          <StyledPressable className='active:bg-gray rounded-xl' onPress={() => { handleProfile(item.reviewerId, router) }}>
+          <StyledPressable className='active:bg-gray rounded-xl' onPress={() => { handleProfile(item.reviewerId, router, profile) }}>
             <StyledView className='flex-row items-center justify-between p-1'>
               <StyledView className='flex-row items-center'>
                 {item.reviewerPfp ? (
@@ -317,25 +300,23 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
       <StyledView className='w-full h-full bg-white'>
         <StyledView className='h-48'>
           <StyledImageBackground source={{uri: seller?.banner}} className='w-full bg-primary h-full justify-end'>
-            {!otherProf && (
-              <SafeAreaView>
-                <StyledPressable className='absolute top-2 left-4' onPress={() => {router.push('/(tabs)/profile/notifications')}}>
-                  <StyledImage source={icons.bell} className='w-7 h-7'/>
-                </StyledPressable>
-                <StyledPressable className='absolute top-2 right-4' onPress={() => {router.push('/(tabs)/profile/menu')}}>
-                  <StyledImage source={icons.menu} className='w-6 h-6'/>
-                </StyledPressable>
-              </SafeAreaView>
-            )}
-              <StyledView className='flex-row justify-between items-center ml-2 mr-4 h-12'>
-                <StyledText className='text-white font-bold flex-1 shadow-sm shadow-darkGray ml-2' style={{ fontSize: fontSize }}>
-                  {username}
-                </StyledText>
-                <StyledView className='flex-row rounded-3xl bg-darkGray pl-2 pr-2 pt-1 pb-1 items-center justify-center'>
-                  <StyledText className='text-xl font-bold text-white'>{seller?.rating}</StyledText>
-                  <StyledImage source={icons.star} style={{ tintColor: '#FF5757' }} className='ml-2 w-6 h-6' />
-                </StyledView>
+            <SafeAreaView>
+              <StyledPressable className='absolute top-2 left-4' onPress={() => {router.push('/(tabs)/profile/notifications')}}>
+                <StyledImage source={icons.bell} className='w-7 h-7'/>
+              </StyledPressable>
+              <StyledPressable className='absolute top-2 right-4' onPress={() => {router.push('/(tabs)/profile/menu')}}>
+                <StyledImage source={icons.menu} className='w-6 h-6'/>
+              </StyledPressable>
+            </SafeAreaView> 
+            <StyledView className='flex-row justify-between items-center ml-2 mr-4 h-12'>
+              <StyledText className='text-white font-bold flex-1 shadow-sm shadow-darkGray ml-2' style={{ fontSize: fontSize }}>
+                {username}
+              </StyledText>
+              <StyledView className='flex-row rounded-3xl bg-darkGray pl-2 pr-2 pt-1 pb-1 items-center justify-center'>
+                <StyledText className='text-xl font-bold text-white'>{seller?.rating}</StyledText>
+                <StyledImage source={icons.star} style={{ tintColor: '#FF5757' }} className='ml-2 w-6 h-6' />
               </StyledView>
+            </StyledView>
           </StyledImageBackground>
         </StyledView>
         <StyledView className='mr-2 ml-2 mb-4 rounded-xl pt-2 pl-2'>
@@ -357,25 +338,12 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
                 </StyledView>
               </StyledView>
               <StyledView className='flex-row flex-1 justify-evenly mt-3 mr-2 ml-2'>
-                {!otherProf?(
-                  <>
-                    <StyledPressable onPress={() => {router.push('/(tabs)/profile/edit')}}className='flex-1 justify-center items-center border rounded-xl p-2 mr-2 active:bg-gray'>
-                      <StyledText className='font-bold'>Edit Profile</StyledText>
-                    </StyledPressable>
-                    <StyledPressable className='flex-1 justify-center items-center bg-primary active:bg-primaryDark rounded-xl p-2'>
-                      <StyledText className='font-bold text-white'>Share Profile</StyledText>
-                    </StyledPressable>
-                  </>
-                ):(
-                  <>
-                    <StyledPressable onPress={() => {handleFollow}}className='flex-1 justify-center items-center bg-primary active:bg-primaryDark rounded-xl p-2 mr-2'>
-                      <StyledText className='font-bold text-white'>Follow</StyledText>
-                    </StyledPressable>
-                    <StyledPressable className='flex-1 justify-center items-center rounded-xl p-2 border active:bg-gray'>
-                      <StyledText className='font-bold'>Message</StyledText>
-                    </StyledPressable>
-                  </>
-                )}
+                <StyledPressable onPress={() => {router.push('/(tabs)/profile/edit')}}className='flex-1 justify-center items-center border rounded-xl p-2 mr-2 active:bg-gray'>
+                  <StyledText className='font-bold'>Edit Profile</StyledText>
+                </StyledPressable>
+                <StyledPressable className='flex-1 justify-center items-center bg-primary active:bg-primaryDark rounded-xl p-2'>
+                  <StyledText className='font-bold text-white'>Share Profile</StyledText>
+                </StyledPressable>  
               </StyledView>
             </StyledView>
           </StyledView>

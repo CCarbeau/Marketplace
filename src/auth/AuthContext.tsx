@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           return { ...prevProfile, ...updatedData };
       });
-  };
+    };
 
     // Sign in
     const signIn = async (email: string, password: string) => {

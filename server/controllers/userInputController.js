@@ -3,16 +3,16 @@ import { FieldValue} from 'firebase-admin/firestore';
 
 export const like = async (req, res) => {
     try {
-      const { uid, listingId, isLike } = req.body;
+      const { uid, listingId, isLiked } = req.body;
   
-      if (!uid || !listingId || !isLike === undefined) {
+      if (!uid || !listingId || !isLiked === undefined) {
         return res.status(400).send({ error: 'Missing uid or listingId or isLiked parameter' });
       }
   
       const docRef = db.collection('listings').doc(listingId); 
       const userDocRef = db.collection('userData').doc(uid);
 
-      if(isLike){
+      if(!isLiked){
         await userDocRef.update({liked: FieldValue.arrayUnion(listingId)})
         await docRef.update({ likes: FieldValue.increment(1) }); 
       }else{
