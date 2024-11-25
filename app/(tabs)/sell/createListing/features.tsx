@@ -55,7 +55,7 @@ const FeaturesModal: React.FC<FeaturesModalProps> = ({ visible, onClose, onSelec
                         <StyledText className='text-2xl text-primary text-center mt-4 font-bold'>Select Features</StyledText>
                         <StyledView className='bg-gray mt-2 w-full h-px' />
                         {options.map((option) => (
-                            <React.Fragment>
+                            <React.Fragment key={option}>
                                 <StyledPressable
                                     key={option}
                                     onPress={() => handleFeaturesSelect(option)}

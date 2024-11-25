@@ -31,6 +31,7 @@ import terms from '..//assets/icons/terms.png'
 import creditCard from '..//assets/icons/creditCard.png'
 import transactions from '..//assets/icons/transactions.png'
 import bell from '..//assets/icons/bell.png'
+import share from '..//assets/icons/share.png'
 
 
 export default {
@@ -67,4 +68,5 @@ export default {
   creditCard,
   transactions,
   bell,
+  share,
 };

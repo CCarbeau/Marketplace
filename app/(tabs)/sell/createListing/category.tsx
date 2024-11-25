@@ -77,7 +77,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ visible, onClose, onSelec
                             <StyledText className='text-2xl text-primary text-center mt-4 font-bold'>Select a Category</StyledText>
                             <StyledView className='bg-gray mt-2 w-full h-px' />
                             {themeOptions.map((option) => (
-                                <React.Fragment>
+                                <React.Fragment key={option}>
                                     <StyledPressable
                                         key={option}
                                         onPress={() => {slideToPage({forward: true, page: option}); setGenre(option);}}
@@ -109,7 +109,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ visible, onClose, onSelec
                                     </StyledPressable>
                                 </StyledView><StyledView className='bg-gray mt-2 w-full h-px' />
                                 {sportsOptions.map((option) => (
-                                    <React.Fragment>
+                                    <React.Fragment key={option}>
                                         <StyledPressable
                                             key={option}
                                             onPress={() => {setTheme(option); slideToSubpage({forward: true, subpage: 'cards'})}}
@@ -137,7 +137,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ visible, onClose, onSelec
                                     </StyledPressable>
                                 </StyledView><StyledView className='bg-gray mt-2 w-full h-px' />
                                 {tcgOptions.map((option) => (
-                                    <React.Fragment>
+                                    <React.Fragment key={option}>
                                         <StyledPressable
                                             key={option}
                                             onPress={() => {setTheme(option.split(' ')[0]); slideToSubpage({forward: true, subpage: 'cards'})}}
@@ -170,33 +170,33 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ visible, onClose, onSelec
                                 </StyledView><StyledView className='bg-gray mt-2 w-full h-px' />
                                 {sportsOptions.map((option) => (
                                     <React.Fragment key={option}>
-                                    {option === "Other Sports" ? (
-                                      <StyledPressable
-                                        onPress={() => {
-                                          setTheme(option);
-                                          handleCategorySelect(option + ' Memorabilia');
-                                        }}
-                                        className='flex-row h-10 w-full items-center justify-between active:bg-gray'
-                                      >
-                                        <StyledText className='text-xl pl-4'>{option} Memorabilia</StyledText>
-                                      </StyledPressable>
-                                    ) : (
-                                      <StyledPressable
-                                        onPress={() => {
-                                          setTheme(option);
-                                          slideToSubpage({ forward: true, subpage: 'memorabilia' });
-                                        }}
-                                        className='flex-row h-10 w-full items-center justify-between active:bg-gray'
-                                      >
-                                        <StyledText className='text-xl pl-4'>{option} Memorabilia</StyledText>
-                                        <StyledImage 
-                                          source={icons.carrotBlack} 
-                                          className='w-5 h-5 mr-4' 
-                                          style={{ transform: [{ rotate: '270deg' }] }} 
-                                        />
-                                      </StyledPressable>
-                                    )}
-                                    <StyledView className='bg-gray w-full h-px' />
+                                        {option === "Other Sports" ? (
+                                        <StyledPressable
+                                            onPress={() => {
+                                            setTheme(option);
+                                            handleCategorySelect(option + ' Memorabilia');
+                                            }}
+                                            className='flex-row h-10 w-full items-center justify-between active:bg-gray'
+                                        >
+                                            <StyledText className='text-xl pl-4'>{option} Memorabilia</StyledText>
+                                        </StyledPressable>
+                                        ) : (
+                                        <StyledPressable
+                                            onPress={() => {
+                                            setTheme(option);
+                                            slideToSubpage({ forward: true, subpage: 'memorabilia' });
+                                            }}
+                                            className='flex-row h-10 w-full items-center justify-between active:bg-gray'
+                                        >
+                                            <StyledText className='text-xl pl-4'>{option} Memorabilia</StyledText>
+                                            <StyledImage 
+                                            source={icons.carrotBlack} 
+                                            className='w-5 h-5 mr-4' 
+                                            style={{ transform: [{ rotate: '270deg' }] }} 
+                                            />
+                                        </StyledPressable>
+                                        )}
+                                        <StyledView className='bg-gray w-full h-px' />
                                   </React.Fragment>
                                 ))}
                                 <StyledView className='w-full h-32'/>
@@ -215,7 +215,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ visible, onClose, onSelec
                                     </StyledPressable>
                                 </StyledView><StyledView className='bg-gray mt-2 w-full h-px' />
                                 {comicsOptions.map((option) => (
-                                    <React.Fragment>
+                                    <React.Fragment key={option}>
                                         <StyledPressable
                                             key={option}
                                             onPress={() => {handleCategorySelect(option)}}
@@ -242,7 +242,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ visible, onClose, onSelec
                                 </StyledPressable>
                             </StyledView><StyledView className='bg-gray mt-2 w-full h-px' />
                             {toysOptions.map((option) => (
-                                <React.Fragment>
+                                <React.Fragment key={option}>
                                     <StyledPressable
                                         key={option}
                                         onPress={() => {handleCategorySelect(option)}}

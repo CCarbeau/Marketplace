@@ -96,6 +96,27 @@ export interface ActiveUser {
     username: string,
 }
 
+export interface Message {
+    sender: string,
+    message: string,
+    sentAt: RawTimestamp,
+}
+
+export interface Conversation {
+    id: string,
+    interlocutor: Interlocutor,
+    lastMessage: string, 
+    messageHistory: Message[],
+    createdAt: RawTimestamp,
+    updatedAt: RawTimestamp,
+}
+
+export interface Interlocutor {
+    username: string, 
+    pfp: string, 
+    id: string,
+}
+
 export interface AuthContextProps {
     user: User | null;
     profile: ActiveUser | null;

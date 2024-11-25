@@ -27,10 +27,6 @@ export default function Layout() {
       }} />
       <Stack.Screen name="notifications" options={({ navigation }) => ({
         headerTitle: 'Notifications',
-        headerTintColor: '#FF5757',
-        headerTitleStyle: {
-          color: '#000000'
-        },
         animation: 'slide_from_left',
         headerShown: false,
       })} />

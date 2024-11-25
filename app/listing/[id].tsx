@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { View, Text, Image, Pressable, ImageBackground, Animated, ScrollView, ActivityIndicator, TouchableHighlight, useWindowDimensions, Alert, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { styled } from 'nativewind';
@@ -8,9 +8,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import SellerTab from './sellerTab';
 import RenderRelatedListings from './relatedListings';
 import RenderBottomBar from './BottomBar';
-import { Listing, Seller, Review } from '@/types/interfaces';
-import { fetchRandomListings, fetchReviews, fetchSeller } from '../functions/fetch';
-import { handleLike, handleReport } from '../functions/userInput';
+import { Listing, Seller, Review, ActiveUser, AuthContextProps } from '@/types/interfaces';
+import { fetchRandomListings, fetchReviews, fetchSeller } from '../../src/functions/fetch';
+import { handleLike, handleReport } from '../../src/functions/userInput';
+import { AuthContext } from '@/src/auth/AuthContext';
 
 const StyledPressable = styled(Pressable);
 const StyledImage = styled(Image);
@@ -29,7 +30,6 @@ interface Details {
 }
 
 const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
-    console.log('called');
     // Utility imports
     const router = useRouter();
     const auth = getAuth();
@@ -43,7 +43,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
     // State management 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [signedIn, setSignedIn] = useState(false);
+    const { user, profile, updateProfile } = useContext(AuthContext) as AuthContextProps; 
     
 
     {/* useEffect Functions */}
@@ -52,6 +52,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
     const [listing, setListing] = useState<Listing | null>(null);
     const [details, setDetails] = useState<Details>({});
     const [isLiked, setIsLiked] = useState(false);
+    const [isOwner, setIsOwner] = useState(false);
 
     useEffect(() => {
         const fetchListing = async () => {
@@ -68,11 +69,17 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                 const data = await response.json();
                 const listing = data.listing as Listing
 
-                console.log(listing);
-
                 setListing(listing);
                 
-                if(propId){setModal(true);}
+                if(propId){
+                    setModal(true);
+                }
+
+                if(profile){
+                    setIsLiked(profile.liked.includes(listing.id));
+                    setIsOwner(profile.id === listing.ownerUID);
+                }
+
 
                 const includeIfDefined = (key: string, value: string | string[] | undefined | null) => (value !== undefined && value !== null ? { [key]: value } : {});
     
@@ -105,19 +112,6 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
 
         fetchListing();
     }, [id, refreshing]);
-
-    // Check auth state
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                setSignedIn(true);
-            } else {
-                setSignedIn(false);
-            }
-        });
-
-        return () => unsubscribe();
-    }, [refreshing]);
 
     // Fetch the listing's seller
     const [seller, setSeller] = useState<Seller | null>(null);
@@ -493,7 +487,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                         
                             {/* Listing Image and Buttons */}
                             <StyledImageBackground source={{ uri: listing.images[0] }} className='h-[496]' imageStyle={{borderTopLeftRadius:16, borderTopRightRadius:16}}>
-                                <StyledPressable onPress={() => { handleLike(listing.id, listing.likes, signedIn, setIsLiked, null, setListing,isLiked, router) }} className='flex-row absolute bg-darkGray right-4 bottom-2 rounded-full'>
+                                <StyledPressable onPress={() => { handleLike(listing.id, isLiked, profile, router, updateProfile) }} className='flex-row absolute bg-darkGray right-4 bottom-2 rounded-full'>
                                     <StyledText className='text-white pl-2 text-xl font-bold self-center'>{listing.likes}</StyledText>
                                     {!isLiked ? (
                                         <StyledImage source={icons.heartEmpty} className='w-6 h-6 m-2' style={{tintColor:'#FF5757'}}/>
@@ -594,7 +588,6 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                 ):(
                 // NON MODAL VIEW 
                     <StyledView className="bg-white rounded-2xl">
-
                         {/* Listing Image and Buttons */}
                         <StyledImageBackground source={{ uri: listing.images[0] }} className='h-[496]' >
                             <SafeAreaView>
@@ -602,7 +595,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                                     <StyledImage source={icons.carrot} style={{transform: [{ rotate: '270deg' }]}} className='ml-1 w-5 h-5'/>
                                 </StyledPressable>
                             </SafeAreaView>
-                            <StyledPressable onPress={() => { handleLike(listing.id, listing.likes, signedIn, setIsLiked, null, setListing,isLiked, router) }} className='flex-row absolute bg-darkGray right-4 bottom-2 rounded-full'>
+                            <StyledPressable onPress={() => { handleLike(listing.id, isLiked, profile, router, updateProfile) }} className='flex-row absolute bg-darkGray right-4 bottom-2 rounded-full'>
                                 <StyledText className='text-white pl-2 text-xl font-bold self-center'>{listing.likes}</StyledText>
                                 {!isLiked ? (
                                     <StyledImage source={icons.heartEmpty} className='w-6 h-6 m-2' style={{tintColor:'#FF5757'}}/>
@@ -707,6 +700,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
                 <StyledView className='flex-row ml-4 mr-2 h-11 justify-between mb-8'>
                     <RenderBottomBar 
                         listing={listing}
+                        isOwner={isOwner}
                     />
                 </StyledView>
             </StyledView>

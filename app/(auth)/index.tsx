@@ -60,7 +60,7 @@ const SignIn = () => {
       await signIn(email, password); 
       setError(null);
       setVisible(false);
-      router.push('/(tabs)/home');
+      router.push('/(tabs)/home/(tabs)');
     } catch (err: any) {
       setError(err.message);
     }
@@ -70,7 +70,7 @@ const SignIn = () => {
     try {
       await signUp(email, password, firstName, lastName, username, interests); // Use signUp from AuthContext
       setVisible(false);
-      router.push('/(tabs)/home');
+      router.push('/(tabs)/home/(tabs)');
     } catch (error: any) {
       console.error('Error signing up:', error.message);
       setError(error.message);

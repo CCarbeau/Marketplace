@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, Image, Pressable, ImageBackground, FlatList, Dimensions, Alert, Animated, Platform, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, Image, Pressable, ImageBackground, FlatList, Dimensions, Alert, Animated, Platform, ScrollView, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
+import { useRouter, Router } from 'expo-router';
 import { styled } from 'nativewind';
 import { LinearGradient } from 'expo-linear-gradient';
 import icons from '../../../../constants/icons';
 import Modal from 'react-native-modal';
 import ListingPage from '@/app/listing/[id]';
 import RenderBottomBar from '@/app/listing/BottomBar';
-import { Listing, AuthContextProps } from '@/types/interfaces';
-import { handleComment, handleFollow, handleLike, handleProfile } from '@/app/functions/userInput';
+import { Listing, AuthContextProps, ActiveUser } from '@/types/interfaces';
+import { handleFollow, handleLike, handleMessage, handleProfile, handleShare } from '@/src/functions/userInput';
 import { AuthContext } from '@/src/auth/AuthContext';
-import { fetchRandomListings, fetchSeller } from '@/app/functions/fetch';
+import { fetchRandomListings, fetchSeller } from '@/src/functions/fetch';
+import { useNavigation } from '@react-navigation/native';
+import {
+    MaterialTopTabNavigationProp,
+} from '@react-navigation/material-top-tabs';
 
 const StyledPressable = styled(Pressable)
 const StyledImage = styled(Image)
@@ -18,7 +22,12 @@ const StyledView = styled(View)
 const StyledText = styled(Text)
 const StyledImageBackground = styled(ImageBackground)
 
-const ListingItem = ({ item, user, profile, router, updateProfile }: any) => {
+type TopTabParamList = {
+  index: undefined;
+  messages: undefined;
+};
+
+const ListingItem = ({ item, profile, router, updateProfile }: {item: Listing, profile: ActiveUser | null, router: Router, updateProfile: (updatedData: Partial<ActiveUser>) => void}) => {
   const { height: screenHeight } = Dimensions.get('window');
   const isIOS = Platform.OS === 'ios';
   const tabBarHeight = isIOS ? 72 : 56;
@@ -27,8 +36,19 @@ const ListingItem = ({ item, user, profile, router, updateProfile }: any) => {
   const [modalVisible, setModalVisible] = useState<{ [key: string]: boolean }>({});
   const imageBackgroundHeight = screenHeight - tabBarHeight;  
 
-  const [isLiked, setIsLiked] = useState(profile.liked.includes(item.id));
-  const [likes, setLikes] = useState(item.likes);
+  const [isLiked, setIsLiked] = useState<boolean>(false);
+  const [isOwner, setIsOwner] = useState(false);
+
+  const navigation = useNavigation<MaterialTopTabNavigationProp<TopTabParamList>>();
+  
+  useEffect(() => {
+    if(profile){
+      setIsLiked(profile.liked.includes(item.id));
+      setIsOwner(profile.id === item.ownerUID);
+    }
+  })
+
+  const [likes, setLikes] = useState<number>(item.likes);
 
   const handleImagePress = () => {
     setCurrentImageIndex((prevIndex) => {
@@ -57,39 +77,46 @@ const ListingItem = ({ item, user, profile, router, updateProfile }: any) => {
               end={{ x: 0.5, y: 1 }}   // Gradient end point
               style={{ flex: 1, justifyContent: 'center'}}
             >
-              <StyledPressable className='absolute right-4 bottom-8 shadow-sm shadow-darkGray' onPress={() => router.push('/(tabs)/home/(tabs)/messages')}>
-                <StyledImage 
-                  source={icons.message} 
-                  className='h-8 w-8'
-                />
-              </StyledPressable>
+              <SafeAreaView className='items-end'>
+                <StyledPressable className='absolute top-0 right-4 h-6 w-6 shadow-sm shadow-darkGray z-11' onPress={() => {navigation.navigate('messages');}}>
+                  <StyledImage 
+                    source={icons.message} 
+                    className='h-6 w-6'
+                  />
+                </StyledPressable>
+              </SafeAreaView>
             </LinearGradient>
           </StyledView>
 
-          <StyledView className='absolute mt-80 right-4 z-10 shadow-sm shadow-darkGray'>
-            <StyledPressable 
+          <StyledView className='absolute bottom-64 right-4 z-10 shadow-sm shadow-darkGray items-center justify-center'>
+            <StyledPressable onPress={() => {handleProfile(item.ownerUID, router, profile)}}>
+              <StyledImage source={{uri: item.seller.pfp}} className='h-10 w-10 rounded-full border border-0.5'/>
+            </StyledPressable>
+
+            <StyledPressable className='mt-4'
               onPress={async () => {
                 const likeSuccess = await handleLike(item.id, isLiked, profile, router, updateProfile);
                 if(likeSuccess){
                   setIsLiked(!isLiked);
-                  setLikes((prevLikes) => (isLiked ? prevLikes - 1 : prevLikes + 1));
+                  setLikes((prevLikes: number) => (isLiked ? prevLikes - 1 : prevLikes + 1));
                 }
               }}
             >
-              <StyledImage source={isLiked ? icons.heartFull : icons.heartEmpty} className='w-12 h-12' />
+              <StyledImage source={isLiked ? icons.heartFull : icons.heartEmpty} className='w-8 h-8' />
               <StyledText className='p-2 text-white text-center'>{likes}</StyledText>
             </StyledPressable>
 
-            <StyledPressable onPress={handleComment}>
-              <StyledImage source={icons.message} className="w-12 h-12" />
+            <StyledPressable onPress={() => {handleMessage(item.ownerUID, router)}}>
+              <StyledImage source={icons.message} className="w-8 h-8" />
             </StyledPressable>
 
-            <StyledPressable onPress={() => {handleProfile(item.ownerUID, router, profile)}}>
-              <StyledImage source={{uri: item.seller.pfp}} className='mt-6 h-12 w-12 rounded-full border'/>
+            <StyledPressable className='mt-4' onPress={handleShare}>
+              <StyledImage source={icons.share} className='w-8 h-8'/>
             </StyledPressable>
+
 
             
-            {user?.uid !== item.ownerUID && !profile?.following.includes(item.ownerUID ?? '') && (
+            {profile?.id !== item.ownerUID && !profile?.following.includes(item.ownerUID ?? '') && (
               <StyledPressable style={{ marginTop: 4, borderColor: 'white', borderWidth: 2, borderRadius: 16 }} onPress={() => {handleFollow(item.ownerUID, false, profile, updateProfile)}}>
                 <StyledText className='text-white text-center'>ADD</StyledText>
               </StyledPressable>
@@ -112,6 +139,7 @@ const ListingItem = ({ item, user, profile, router, updateProfile }: any) => {
                 <StyledView className='flex-row mb-2 ml-2'>
                   <RenderBottomBar 
                     listing = {item}
+                    isOwner = {isOwner}
                   />
                 </StyledView>
                 <StyledView className='flex flex-row justify-center gap-x-8 mb-2'>
@@ -122,7 +150,7 @@ const ListingItem = ({ item, user, profile, router, updateProfile }: any) => {
               </StyledView>
             </LinearGradient>
           </StyledView>
-          
+           
           <Modal
             isVisible={modalVisible[item.id]}
             style={styles.bottomModal}
@@ -216,7 +244,6 @@ const Index = () => {
   const renderItem = ({ item }: { item: Listing }) => (
     <ListingItem
       item={item}
-      user={user}
       profile={profile}
       router={router}
       updateProfile={updateProfile}

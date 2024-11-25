@@ -117,7 +117,7 @@ export const fetchSeller = async (req, res) => {
           return res.status(404).send({ error: 'Seller not found' });
         }
     
-        const user = docSnap.data()
+        const user = docSnap.data();
         const seller = {
           username: user?.username || 'Unknown',
           pfp: user?.pfp || null,
@@ -135,6 +135,92 @@ export const fetchSeller = async (req, res) => {
         res.status(200).send({message: 'Seller retrieved successfully', seller})
     }catch (error){
         console.error('Error fetching user', error);
-        res.status(500).send({error: 'Failed to retrieve user'})
+        res.status(400).send({error: 'Failed to retrieve user'})
     }
+};
+
+export const fetchMessages = async (req, res) => {
+  try{
+    const { conversationId } = req.query; 
+
+    if (!conversationId){
+      return res.status(400).send({error: 'No sellerId or recipientId provided'});
+    }
+
+    const docRef = db.collection('conversations').doc(conversationId);
+    const docSnap = await docRef.get();
+
+    if (!docSnap.exists) {
+      return res.status(404).send({ error: 'Seller not found' });
+    }
+
+    const conversation = docSnap.data();
+    res.status(200).send({message: 'Conversation retrieved successfully', conversation})
+  }catch (error){
+    console.error('Error fetching messages', error);
+    res.status(400).send({error: 'Failed to retrieve messages'})
+  }
+}
+
+export const fetchConversations = async (req, res) => {
+  try {
+    const { id } = req.query;
+
+    if (!id) {
+      return res.status(400).send({ error: 'No id provided' });
+    }
+
+    const conversationsRef = db.collection('conversations');
+    const usersRef = db.collection('userData'); 
+
+    // Fetch conversations where the user is a participant
+    const querySnapshot = await conversationsRef
+      .where('participants', 'array-contains', id)
+      .orderBy('updatedAt', 'desc')
+      .get();
+
+    if (querySnapshot.empty) {
+      return res.status(404).send({ error: 'No conversations found' });
+    }
+
+    // Fetch interlocutor details for each conversation
+    const conversations = await Promise.all(
+      querySnapshot.docs.map(async (doc) => {
+        const conversationData = doc.data();
+        const interlocutorId = conversationData.participants.find((participantId) => participantId !== id);
+
+        if (!interlocutorId) {
+          throw new Error('Interlocutor ID not found in conversation');
+        }
+
+        const interlocutorDoc = await usersRef.doc(interlocutorId).get();
+        if (!interlocutorDoc.exists) {
+          throw new Error(`User with ID ${interlocutorId} not found`);
+        }
+
+        const interlocutorData = interlocutorDoc.data();
+
+        return {
+          id: doc.id,
+          interlocutor: {
+            id: interlocutorId,
+            username: interlocutorData.username,
+            pfp: interlocutorData.pfp,
+          },
+          lastMessage: conversationData.lastMessage,
+          messageHistory: conversationData.messageHistory,
+          createdAt: conversationData.createdAt,
+          updatedAt: conversationData.updatedAt,
+        };
+      })
+    );
+
+    res.status(200).send({
+      message: 'Conversations retrieved successfully',
+      conversations,
+    });
+  } catch (error) {
+    console.error('Error retrieving conversations:', error);
+    res.status(500).send({ error: 'Failed to retrieve conversations' });
+  }
 };

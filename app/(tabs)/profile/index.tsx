@@ -1,7 +1,7 @@
 import { View, Text, Pressable, Image, Alert, ScrollView, ImageBackground, Animated, useWindowDimensions, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { styled } from 'nativewind';
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Listing, Seller, Review, AuthContextProps } from '@/types/interfaces';
 import { AuthContext } from '@/src/auth/AuthContext';
 
@@ -9,8 +9,8 @@ import { AuthContext } from '@/src/auth/AuthContext';
 import profileExample from '../../../assets/images/profileExample.png';
 import icons from '@/constants/icons'
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { handleFollow, handleProfile } from '@/app/functions/userInput';
-import { fetchReviews, fetchSeller } from '@/app/functions/fetch';
+import { handleProfile } from '@/src/functions/userInput';
+import { fetchReviews } from '@/src/functions/fetch';
 
 const StyledPressable = styled(Pressable);
 const StyledText = styled(Text);
@@ -262,7 +262,7 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
         </StyledView>
         <StyledView className='flex absolute w-full h-32 bottom-12'>
           <StyledPressable
-            onPress={() => { router.push('/(auth)/'); }}
+            onPress={() => { router.push('/(auth)'); }}
             className='flex justify-center bg-primary flex-1 mr-4 ml-4 rounded-full'
           >
             <StyledText className='text-white text-center font-bold text-3xl p-2'>

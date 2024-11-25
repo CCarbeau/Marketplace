@@ -4,6 +4,7 @@ import {
     MaterialTopTabNavigationEventMap,
 } from "@react-navigation/material-top-tabs";
 import { ParamListBase, TabNavigationState } from "@react-navigation/native";
+import { Stack } from 'expo-router/stack';
 
 const { Navigator } = createMaterialTopTabNavigator(); 
 import { withLayoutContext } from "expo-router";
@@ -16,18 +17,21 @@ MaterialTopTabNavigationEventMap
 >(Navigator);
 
 const TopTabLayout = () => {
+
     return (
         <MaterialTobTabs 
             screenOptions={{
-            tabBarActiveTintColor:"blue",
-            tabBarStyle:{
-                backgroundColor:'transparent',
-                position:"absolute",
-            }
-
-        }}>
+                tabBarStyle: {
+                    position: 'relative',
+                    top: -48,
+                    height: 0,
+                    zIndex: -1000,
+                     
+                }
+            }}
+        >
             <MaterialTobTabs.Screen name="index" options={{
-                title:"Following"
+                title:"Index"
             }}>
             </MaterialTobTabs.Screen>
             

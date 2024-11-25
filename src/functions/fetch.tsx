@@ -22,7 +22,6 @@ export const fetchSeller = async (uid: string | undefined) => {
 }
 
 export const fetchRandomListings = async (sellerId: string | undefined, category: string | undefined, listingId: string | undefined, numListings: number | undefined, active: boolean | undefined) => {
-    
     try {
         const response = await fetch(`${API_URL}/listings/fetch-random-listings?sellerId=${sellerId}&category=${category}&listingId=${listingId}&numListings=${numListings}&active=${active}`, {
             method: 'GET',
@@ -64,4 +63,4 @@ export const fetchReviews = async (ownerUID: string | undefined) => {
     }
 
     return null;
-  };
+};

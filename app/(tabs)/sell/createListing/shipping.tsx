@@ -49,7 +49,7 @@ const ShippingModal: React.FC<ShippingModalProps> = ({ visible, onClose, onSelec
                         <StyledText className='text-2xl text-primary text-center mt-4 font-bold'>Select Shipping</StyledText>
                         <StyledView className='bg-gray mt-2 w-full h-px' />
                         {options.map((option) => (
-                            <React.Fragment>
+                            <React.Fragment key={option}>
                                 <StyledPressable
                                     key={option}
                                     onPress={() => handleShippingSelect(option)}

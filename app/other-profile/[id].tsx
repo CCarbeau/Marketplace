@@ -7,8 +7,8 @@ import { AuthContext } from '@/src/auth/AuthContext';
 
 import icons from '@/constants/icons'
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { handleFollow, handleProfile } from '@/app/functions/userInput';
-import { fetchReviews, fetchSeller } from '@/app/functions/fetch';
+import { handleFollow, handleProfile } from '@/src/functions/userInput';
+import { fetchReviews, fetchSeller } from '@/src/functions/fetch';
 
 const StyledPressable = styled(Pressable);
 const StyledText = styled(Text);

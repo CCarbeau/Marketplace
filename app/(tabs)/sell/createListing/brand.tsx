@@ -44,7 +44,7 @@ const BrandModal: React.FC<BrandModalProps> = ({ visible, onClose, onSelectBrand
                         <StyledText className='text-2xl text-primary text-center mt-4 font-bold'>Select Brand</StyledText>
                         <StyledView className='bg-gray mt-2 w-full h-px' />
                         {options.map((option) => (
-                            <React.Fragment>
+                            <React.Fragment key={option}>
                                 <StyledPressable
                                     key={option}
                                     onPress={() => handleBrandSelect(option)}

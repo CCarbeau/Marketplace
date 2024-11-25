@@ -3,31 +3,20 @@ import { View, Text, Image, Pressable, ImageBackground, Animated, Alert } from '
 import { styled } from 'nativewind';
 import PulsatingCircle from '@/components/PulsatingCircle';
 import { Listing } from '@/types/interfaces';
+import { handleCustomBid, handleEdit, handleOffer, handlePurchase } from '../../src/functions/userInput';
 
 const StyledPressable = styled(Pressable);
 const StyledView = styled(View);
 const StyledText = styled(Text);
 
 interface BottomBarProps{
-    listing: Listing
+    listing: Listing,
+    isOwner: boolean,
 }
 
 
 // Render Bottom Bar
-const RenderBottomBar: React.FC<BottomBarProps> = ({listing: listing}) => {
-
-    const handlePurchase = () => {
-        Alert.alert('purchase initiated')
-    }
-
-    const handleOffer = () => {
-
-    }
-
-    const handleCustomBid = () => {
-
-    }
-
+const RenderBottomBar: React.FC<BottomBarProps> = ({listing: listing, isOwner: isOwner}) => {
     // Bid/Buy Now Button Animation
     const [progress] = useState(new Animated.Value(0));
 
@@ -58,6 +47,19 @@ const RenderBottomBar: React.FC<BottomBarProps> = ({listing: listing}) => {
     
     if(!listing){
         return <StyledText className="text-center mt-4">Listing not found</StyledText>;
+    }
+
+    if(isOwner){
+        return(
+            <StyledView className='w-full'>
+                <StyledPressable 
+                    className='bg-primary active:bg-primaryDark rounded-xl justify-center items-center mr-2 h-10 mt-2 shadow-sm shadow-darkGray'
+                    onPress={handleEdit}
+                >
+                    <StyledText className='text-white text-lg font-bold text-center'>Edit</StyledText>
+                </StyledPressable>
+            </StyledView>
+        )
     }
 
     return (

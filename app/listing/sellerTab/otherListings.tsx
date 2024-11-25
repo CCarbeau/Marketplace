@@ -6,7 +6,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../../../src/auth/firebaseConfig';
 import { Listing, Seller, Layout } from '@/types/interfaces';
-import { handleLike } from '@/app/functions/userInput';
+import { handleLike } from '@/src/functions/userInput';
 
 const StyledPressable = styled(Pressable);
 const StyledImageBackground = styled(ImageBackground);

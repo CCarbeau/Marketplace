@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef, useContext } from 'react'
 import InterestModal from './interest';
 import { useRouter } from 'expo-router';
 import icons from '../../constants/icons';
-import { AuthContext, AuthContextProps } from '../../src/auth/AuthContext'; 
+import { AuthContext } from '../../src/auth/AuthContext'; 
+import { AuthContextProps } from '@/types/interfaces';
 
 const StyledPressable = styled(Pressable)
 const StyledView = styled(View)
@@ -48,7 +49,7 @@ const SignUp = () => {
     try {
       await signUp(email, password, firstName, lastName, username, interests); // Use signUp from AuthContext
       setVisible(false);
-      router.push('/(tabs)/home');
+      router.push('/(tabs)/home/(tabs)');
     } catch (error: any) {
       console.error('Error signing up:', error.message);
       setError(error.message);

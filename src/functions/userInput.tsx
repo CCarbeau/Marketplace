@@ -43,14 +43,14 @@ export const handleLike = async (listingId: string, isLiked: boolean, profile: A
       return false;
     }
   }else{
-    router.push('/(auth)/');
+    router.push('/(auth)');
     return false;
   }
 
 };
 
-export const handleComment = () => {
-    // Handle comment logic
+export const handleMessage = (receiverId: string | undefined, router: Router) => {
+    router.push(`/messages/${receiverId}`)
 };
 
 export const handleProfile = (uid: string | undefined, router: Router, profile: ActiveUser | null) => {
@@ -105,6 +105,10 @@ export const handleFollow = async (followeeId: string | undefined, following: bo
   return false;
 };
 
+export const handleShare = () => {
+  
+}
+
 export const handlePurchase = () => {
     Alert.alert('purchase initiated')
 }
@@ -115,4 +119,12 @@ export const handleOffer = () => {
 
 export const handleReport = () => {
 
+}
+
+export const handleEdit = () => {
+
+}
+
+export const handleCustomBid = () => {
+  
 }

@@ -21,7 +21,7 @@ const menu = () => {
   const handleSignOut = async () => {
     await signOut(auth);
     router.back();
-    router.push('/(tabs)/home/(tabs)/');
+    router.push('/(tabs)/home/(tabs)');
   };
 
   const RenderFinances = () => {

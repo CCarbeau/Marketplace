@@ -49,3 +49,55 @@ export const follow = async (req, res) => {
         res.status(400).send({error: 'Error updating followers'})
     }
 }
+
+export const sendMessage = async (req, res) => {
+  try {
+    const { message, senderId, recipientId } = req.body;
+
+    if (!message || !senderId || !recipientId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const participants = [senderId, recipientId].sort();
+    const conversationId = participants.join('_');
+
+    const conversationRef = db.collection('conversations').doc(conversationId);
+
+    await db.runTransaction(async (transaction) => {
+      const conversationDoc = await transaction.get(conversationRef);
+
+      if (conversationDoc.exists) {
+        // Update existing conversation
+        transaction.update(conversationRef, {
+          messageHistory: FieldValue.arrayUnion({
+            message: message,
+            sender: senderId,
+            sentAt: new Date().toISOString(),
+          }),
+          lastMessage: message,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Create a new conversation
+        transaction.set(conversationRef, {
+          participants,
+          messageHistory: [
+            {
+              message: message,
+              sender: senderId,
+              sentAt: new Date().toISOString(), 
+            },
+          ],
+          lastMessage: message,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+    });
+
+    res.status(200).json({ message: 'Successfully sent message' });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(400).json({ error: 'Error sending message', details: error.message });
+  }
+};
