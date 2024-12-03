@@ -19,7 +19,6 @@ export interface Listing {
     athletes?: string[];
     teams?: string[];
     listingType: 'fixed' | 'auction';
-    bids?: number;
     duration?: string;
     offerable?: boolean;
     scheduled?: boolean;
@@ -35,6 +34,14 @@ export interface Listing {
     random?: number;
     id: string;
     seller: Seller;
+    bidCount: number;
+    bids: Bid;
+    endDate: RawTimestamp;
+
+}
+
+export interface Bid {
+
 }
   
 export interface RawTimestamp {

@@ -33,6 +33,7 @@
     "@stripe/react-stripe-js": "^2.8.0",
     "@stripe/stripe-js": "^4.5.0",
     "@stripe/stripe-react-native": "0.38.6",
+    "algoliasearch": "^5.15.0",
     "autoprefixer": "^10.4.20",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",

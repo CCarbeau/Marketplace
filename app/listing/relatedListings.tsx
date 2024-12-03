@@ -5,41 +5,13 @@ import icons from '../../constants/icons';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../../src/auth/firebaseConfig';
+import { Listing } from '@/types/interfaces';
 
 const StyledPressable = styled(Pressable);
 const StyledImageBackground = styled(ImageBackground);
 const StyledImage = styled(Image);
 const StyledView = styled(View);
 const StyledText = styled(Text);
-
-interface Listing {
-  images: string[];
-  title: string;
-  description: string;
-  price: number;
-  quantity: number;
-  listingType: 'fixed' | 'auction';
-  bids?: number;
-  duration?: string;
-  createdAt?: RawTimestamp;
-  id: string;
-  likes: number;
-}
-
-interface RawTimestamp {
-  _seconds: string;
-  _nanoseconds: string;
-}
-
-interface Seller {
-  username: string;
-  pfp: string;
-  rating: number;
-  numberOfFollowers: number;
-  itemsSold: number;
-  listings: string[];
-  id: string;
-}
 
 interface Layout {
   height: number;
@@ -165,9 +137,9 @@ const RenderRelatedListings: React.FC<RenderRelatedListingsProps> = ({
               {listing.listingType === 'auction' && listing.createdAt ? (
                 <StyledView className="flex-row items-center">
                   {listing.bids === 1 ? (
-                    <StyledText className="text-md text-darkGray">{listing.bids} Bid • </StyledText>
+                    <StyledText className="text-md text-darkGray">{listing.bidCount} Bid • </StyledText>
                   ) : (
-                    <StyledText className="text-md text-darkGray">{listing.bids} Bids • </StyledText>
+                    <StyledText className="text-md text-darkGray">{listing.bidCount} Bids • </StyledText>
                   )}
                   <StyledText className="font-bold text-primary text-md">
                     {calcTimeRemaining(

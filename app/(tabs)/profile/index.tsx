@@ -29,7 +29,6 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
   const { user, profile } = useContext(AuthContext) as AuthContextProps;
 
   const [seller, setSeller] = useState<Seller | null>(null);
-  const [sellerId, setSellerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -37,14 +36,13 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
 
   useEffect(() => {
     const fetchSellerData = async () => {
-      if(user){
-        setSellerId(user.uid);
+      if(profile){
         setSeller(profile as Seller); 
       }
     };
 
     fetchSellerData();
-  }, [refreshing]);
+  }, [refreshing, profile]);
 
   const [fontSize, setFontSize] = useState(32); // Default font size (4xl equivalent)
 
@@ -114,7 +112,7 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
     const fetchActiveListings = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}/listings/fetch-owner-listings-by-recent?sellerId=${sellerId}&numListings=9`, {
+        const response = await fetch(`${API_URL}/listings/fetch-owner-listings-by-recent?sellerId=${seller?.id}&numListings=9`, {
           method: 'GET',
         });
   
@@ -138,7 +136,7 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
     const fetchSoldListings = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}/listings/fetch-owner-listings-by-recent?sellerId=${sellerId}&numListings=9&sold=true`, {
+        const response = await fetch(`${API_URL}/listings/fetch-owner-listings-by-recent?sellerId=${seller?.id}&numListings=9&sold=true`, {
           method: 'GET',
         });
   
@@ -160,11 +158,11 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
     fetchSoldListings();
 
     const fetchReviewsData = async () => {
-      if(sellerId){
+      if(seller?.id){
         try{
           setLoading(true);
 
-          const ret = await fetchReviews(sellerId);
+          const ret = await fetchReviews(seller.id);
 
           if (ret) {
             setReviews(ret); // Only set seller if data is returned
@@ -183,7 +181,7 @@ const ProfilePage:React.FC<ProfilePageProps> = () => {
 
     fetchReviewsData();
     
-  }, [sellerId, refreshing])
+  }, [seller, refreshing])
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);

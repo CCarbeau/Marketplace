@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { View, Text, ImageBackground, Image, Pressable } from 'react-native';
 import { styled } from 'nativewind';
 import icons from '../../../constants/icons';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { doc, updateDoc, increment } from 'firebase/firestore';
-import { db } from '../../../src/auth/firebaseConfig';
-import { Listing, Seller, Layout } from '@/types/interfaces';
+import { Listing, Seller, Layout, AuthContextProps } from '@/types/interfaces';
 import { handleLike } from '@/src/functions/userInput';
+import { AuthContext } from '@/src/auth/AuthContext';
 
 const StyledPressable = styled(Pressable);
 const StyledImageBackground = styled(ImageBackground);
@@ -31,20 +30,9 @@ const RenderOtherListings: React.FC<RenderOtherListingsProps> = ({
   calcTimeRemaining,
   convertToDate,
 }) => {
-    const [signedIn, setSignedIn] = useState(false);
     const auth = getAuth();
+    const { user, profile, updateProfile } = useContext(AuthContext) as AuthContextProps; 
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                setSignedIn(true);
-            } else {
-                setSignedIn(false);
-            }
-        });
-
-        return () => unsubscribe();
-    }, []);
   // State to track which listings are liked
   const [likedListings, setLikedListings] = useState<{ [key: string]: boolean }>({});
   const [likesCount, setLikesCount] = useState<{ [key: string]: number }>(
@@ -76,7 +64,7 @@ const RenderOtherListings: React.FC<RenderOtherListingsProps> = ({
                 >
                   <StyledPressable
                     className='flex-row absolute bg-darkGray right-2 top-2 rounded-full'
-                    onPress={() => handleLike(listing.id, listing.likes, signedIn, setLikesCount, setLikedListings, null, likesCount[listing.id], router)}
+                    onPress={() => handleLike(listing.id, isLiked, profile, router, updateProfile)}
                   >
                     <StyledText className='text-white pl-2 text-lg font-bold self-center'>{listing.likes}</StyledText>
                     <StyledImage
@@ -105,9 +93,9 @@ const RenderOtherListings: React.FC<RenderOtherListingsProps> = ({
               {listing.listingType === 'auction' && listing.createdAt ? (
                 <StyledView className="flex-row items-center">
                   {listing.bids === 1 ? (
-                    <StyledText className="text-md text-darkGray">{listing.bids} Bid • </StyledText>
+                    <StyledText className="text-md text-darkGray">{listing.bidCount} Bid • </StyledText>
                   ) : (
-                    <StyledText className="text-md text-darkGray">{listing.bids} Bids • </StyledText>
+                    <StyledText className="text-md text-darkGray">{listing.bidCount} Bids • </StyledText>
                   )}
                   <StyledText className="font-bold text-primary text-md">
                     {calcTimeRemaining(

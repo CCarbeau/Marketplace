@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const API_URL = 'http://localhost:3000'
 
 export const createStripeAccount = async (req, res) => {
   try {
@@ -11,8 +12,8 @@ export const createStripeAccount = async (req, res) => {
 
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
-      refresh_url: `${process.env.API_URL}/auth/signup`,
-      return_url: `${process.env.API_URL}/profile`,
+      refresh_url: `${API_URL}/auth/signup`,
+      return_url: `${API_URL}/profile`,
       type: 'account_onboarding',
     });
 

@@ -32,6 +32,10 @@ import creditCard from '..//assets/icons/creditCard.png'
 import transactions from '..//assets/icons/transactions.png'
 import bell from '..//assets/icons/bell.png'
 import share from '..//assets/icons/share.png'
+import exclamation from '..//assets/icons/!.png'
+import edit from '..//assets/icons/edit.png'
+import promo from '..//assets/icons/promo.png'
+import plus from '..//assets/icons/+.png'
 
 
 export default {
@@ -69,4 +73,8 @@ export default {
   transactions,
   bell,
   share,
+  exclamation,
+  edit,
+  promo,
+  plus,
 };

@@ -359,7 +359,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
 
         return (
             <StyledView className='w-full pl-4 pr-4'>
-                <StyledText className='text-3xl font-bold mt-2'>{listing.title}</StyledText>
+                <StyledText className='text-xl font-bold mt-2'>{listing.title}</StyledText>
                 <StyledText className='text-gray'>{listing.description}</StyledText>
                 <StyledView className='flex flex-row mt-4'>
                     <StyledText className='text-xl font-bold'>${listing.price}</StyledText>
@@ -562,7 +562,7 @@ const ListingPage: React.FC<ListingPageProps> = ({ id: propId }) => {
 
                             {/* Related Items Block */}
                             <StyledView className='ml-2 mr-2 mt-8'>
-                                <StyledText className='font-bold text-2xl ml-2'>Related Listings</StyledText>
+                                <StyledText className='font-bold text-lg ml-2'>Related Listings</StyledText>
                                 <ScrollView 
                                     horizontal 
                                     showsHorizontalScrollIndicator={false} 

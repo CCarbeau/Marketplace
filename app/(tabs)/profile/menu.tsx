@@ -19,9 +19,9 @@ const menu = () => {
   const { user } = useAuth();
 
   const handleSignOut = async () => {
-    await signOut(auth);
     router.back();
-    router.push('/(tabs)/home/(tabs)');
+    await signOut(auth);
+    // router.push('/(tabs)/home/(tabs)');
   };
 
   const RenderFinances = () => {
@@ -48,7 +48,7 @@ const menu = () => {
             </StyledView>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border justify-center'>
                         <StyledImage source={icons.creditCard} style={{tintColor:'#000000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold'>Payment Methods</StyledText>
@@ -57,7 +57,7 @@ const menu = () => {
             </StyledPressable>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border justify-center'>
                         <StyledImage source={icons.transactions} style={{tintColor:'#000000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold'>Transactions</StyledText>
@@ -73,7 +73,7 @@ const menu = () => {
         <StyledView>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border justify-center'>
                         <StyledImage source={icons.dollar} style={{tintColor:'#000000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold'>Purchases</StyledText>
@@ -82,7 +82,7 @@ const menu = () => {
             </StyledPressable>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border justify-center'>
                         <StyledImage source={icons.gavel} style={{tintColor:'#000000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold'>Bids</StyledText>
@@ -91,7 +91,7 @@ const menu = () => {
             </StyledPressable>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border justify-center'>
                         <StyledImage source={icons.handshake} style={{tintColor:'#000000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold'>Offers</StyledText>
@@ -100,7 +100,7 @@ const menu = () => {
             </StyledPressable>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border justify-center'>
                         <StyledImage source={icons.heartEmpty} style={{tintColor:'#000000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold'>Likes</StyledText>
@@ -116,7 +116,7 @@ const menu = () => {
         <StyledView>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border justify-center'>
                         <StyledImage source={icons.message} style={{tintColor:'#000000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold'>Messages</StyledText>
@@ -125,7 +125,7 @@ const menu = () => {
             </StyledPressable>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border justify-center'>
                         <StyledImage source={icons.email} style={{tintColor:'#000000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold'>Change Email</StyledText>
@@ -134,7 +134,7 @@ const menu = () => {
             </StyledPressable>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border justify-center'>
                         <StyledImage source={icons.lock} style={{tintColor:'#000000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold'>Change Password</StyledText>
@@ -143,7 +143,7 @@ const menu = () => {
             </StyledPressable>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border justify-center'>
                         <StyledImage source={icons.pin} style={{tintColor:'#000000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold'>Addresses</StyledText>
@@ -152,7 +152,7 @@ const menu = () => {
             </StyledPressable>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border border-red-500 justify-center'>
                         <StyledImage source={icons.trash} style={{tintColor:'#FF0000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold text-red-500'>Delete Account</StyledText>
@@ -168,7 +168,7 @@ const menu = () => {
         <StyledView>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border justify-center'>
                         <StyledImage source={icons.lock} style={{tintColor:'#000000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold'>Privacy Policy</StyledText>
@@ -177,7 +177,7 @@ const menu = () => {
             </StyledPressable>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border justify-center'>
                         <StyledImage source={icons.terms} style={{tintColor:'#000000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold'>Terms & Conditions</StyledText>
@@ -186,7 +186,7 @@ const menu = () => {
             </StyledPressable>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border justify-center'>
                         <StyledImage source={icons.message} style={{tintColor:'#000000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold'>Contact Us</StyledText>
@@ -195,7 +195,7 @@ const menu = () => {
             </StyledPressable>
             <StyledPressable className='flex-row items-center justify-between active:bg-gray w-full rounded-xl p-2 mt-4'>
                 <StyledView className='flex-row items-center'>
-                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center justify-center'>
+                    <StyledView className='bg-lightGray rounded-full w-10 h-10 items-center border justify-center'>
                         <StyledImage source={icons.question} style={{tintColor:'#000000'}} className='w-6 h-6'/>
                     </StyledView>
                     <StyledText className='ml-4 font-bold'>FAQ</StyledText>

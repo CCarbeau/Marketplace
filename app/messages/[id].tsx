@@ -68,7 +68,7 @@ const MessagesPage = () => {
       const data = await response.json();
       const conversationData = data.conversation.messageHistory;
       
-      setConversation(conversationData);
+      setConversation(conversationData.reverse());
     }
 
     fetchConversationData();
@@ -110,7 +110,7 @@ const MessagesPage = () => {
   const renderItem = ({item}: {item: Message}) => {
     if(item.sender === profile?.id){
       return (
-        <StyledView className='w-full items-end'>
+        <StyledView className='w-full items-end mt-2'>
           <StyledView className='bg-primary rounded-2xl mr-2 p-2 border border-darkGray' style={{maxWidth: layout.width*2/3}}>
             <StyledText className='text-white font-bold'>
               {item.message}
@@ -185,7 +185,7 @@ const MessagesPage = () => {
               }}
             />
 
-            <StyledView className='absolute bottom-4 w-full'>
+            <StyledView className='absolute bottom-4 w-full bg-white'>
               <StyledView className='w-full h-px bg-lightGray mb-2'/>
               <StyledView
                 className="flex-row ml-2 mr-2 justify-center items-end"

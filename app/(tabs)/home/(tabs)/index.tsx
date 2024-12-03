@@ -88,10 +88,19 @@ const ListingItem = ({ item, profile, router, updateProfile }: {item: Listing, p
             </LinearGradient>
           </StyledView>
 
-          <StyledView className='absolute bottom-64 right-4 z-10 shadow-sm shadow-darkGray items-center justify-center'>
+          <StyledView className='absolute bottom-64 right-2 z-10 shadow-sm shadow-darkGray items-center justify-center'>
             <StyledPressable onPress={() => {handleProfile(item.ownerUID, router, profile)}}>
-              <StyledImage source={{uri: item.seller.pfp}} className='h-10 w-10 rounded-full border border-0.5'/>
+              <StyledImage source={{uri: item.seller.pfp}} className='h-12 w-12 rounded-full border border-0.5'/>
             </StyledPressable>
+            
+            {profile?.id !== item.ownerUID && !profile?.following.includes(item.ownerUID ?? '') && (
+              <StyledPressable 
+                className='w-5 h-5 -mt-2 border border-primary border-2 rounded-full bg-primary items-center justify-center' 
+                onPress={() => {handleFollow(item.ownerUID, false, profile, updateProfile)}}
+              >
+                <StyledImage className='w-3 h-3' source={icons.plus}/>
+              </StyledPressable>
+            )}
 
             <StyledPressable className='mt-4'
               onPress={async () => {
@@ -113,14 +122,6 @@ const ListingItem = ({ item, profile, router, updateProfile }: {item: Listing, p
             <StyledPressable className='mt-4' onPress={handleShare}>
               <StyledImage source={icons.share} className='w-8 h-8'/>
             </StyledPressable>
-
-
-            
-            {profile?.id !== item.ownerUID && !profile?.following.includes(item.ownerUID ?? '') && (
-              <StyledPressable style={{ marginTop: 4, borderColor: 'white', borderWidth: 2, borderRadius: 16 }} onPress={() => {handleFollow(item.ownerUID, false, profile, updateProfile)}}>
-                <StyledText className='text-white text-center'>ADD</StyledText>
-              </StyledPressable>
-            )}
           </StyledView>
 
           <StyledView className='absolute bottom-0 h-2/5 w-full inset-x-0'>

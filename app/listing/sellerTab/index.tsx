@@ -47,7 +47,7 @@ const SellerTab: React.FC<SellerTabProps> = ({
             <StyledView className="flex-row h-20">
                 <StyledPressable onPress={() => handleProfile(seller.id)}>
                     {seller.pfp ? (
-                        <StyledImage source={{ uri: seller.pfp }} className="w-20 h-20 rounded-full" />
+                        <StyledImage source={{ uri: seller.pfp }} className="w-20 h-20 rounded-full border" />
                     ) : (
                         <StyledImage source={icons.profile} className="w-20 h-20" />
                     )}
@@ -55,7 +55,7 @@ const SellerTab: React.FC<SellerTabProps> = ({
                 <StyledView className="flex-auto ml-2 mt-1 w-full">
                     <StyledView className="flex-row justify-between">
                         <StyledView>
-                            <StyledText className="text-2xl font-bold">{seller.username}</StyledText>
+                            <StyledText className="text-lg font-bold">{seller.username}</StyledText>
                             <StyledText className="text-md">Seller since 2024</StyledText>
                         </StyledView>
                         <StyledView className="flex-row">
@@ -73,7 +73,7 @@ const SellerTab: React.FC<SellerTabProps> = ({
                             </StyledPressable>
                         </StyledView>
                     </StyledView>
-                    <StyledView className="flex-row w-3/5 justify-between">
+                    <StyledView className="flex-row w-3/5 mt-1 justify-between">
                         <StyledView className="flex-row items-center">
                             <StyledText className="text-lg">{seller.numberOfFollowers}</StyledText>
                             <StyledImage source={icons.follower} className="ml-1 w-5 h-5" />

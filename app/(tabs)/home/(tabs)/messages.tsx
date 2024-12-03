@@ -106,11 +106,11 @@ const messages = () => {
                         onPress={() => {
                             handleNavigateToHome();
                     }}>
-                    <StyledImage
-                        source={icons.carrotBlack}
-                        className="w-5 h-5"
-                        style={{ tintColor: '#FF5757', transform: [{ rotate: '90deg' }] }}
-                    />
+                        <StyledImage
+                            source={icons.carrotBlack}
+                            className="w-5 h-5"
+                            style={{ tintColor: '#FF5757', transform: [{ rotate: '90deg' }] }}
+                        />
                     </StyledPressable>
                 </StyledView>
                 <StyledView className='absolute w-full bottom-0 h-px bg-darkWhite'/>

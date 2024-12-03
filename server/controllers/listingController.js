@@ -1,72 +1,129 @@
 import { db } from '../config/firebaseAdminConfig.js';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export const addListing = async (req, res) => {
   try {
+    const {
+      downloadURLs,
+      title,
+      description,
+      price,
+      quantity,
+      category,
+      genre,
+      athlete,
+      team,
+      year,
+      brand,
+      set,
+      features,
+      parallel,
+      printRun,
+      cardsInLot,
+      athletes,
+      teams,
+      listingType,
+      duration,
+      offerable,
+      scheduled,
+      date,
+      time,
+      shippingType,
+      weight,
+      shippingProfile,
+      shippingCost,
+      ownerUID,
+    } = req.body;
+
+    // Validate required fields
+    if (!title || price == null || !ownerUID) {
+      return res.status(400).send({ error: 'Missing required fields: title, price, or ownerUID.' });
+    }
+
     const docData = {
-        images: downloadURLs, // Save all download URLs
-        title: title || '', // Default to empty string if title is missing
-        description: description || '',
-        price: price || 0,
-        quantity: quantity || 1,
-        category: category || '',
-        ...(category && category.slice(-7) === 'Singles' && genre === 'Sports Cards' ? {
-          ...(athlete && { athlete }),
-          ...(team && { team }),
-          ...(year && { year }),
-          ...(brand && { brand }),
-          ...(set && { set }),
-          ...(features && { features }),
-          ...(parallel && { parallel }),
-          ...(printRun && { printRun }),
-        } : {}),
-        ...(category && category.slice(-3) === 'Lot' && genre === 'Sports Cards' ? {
-          ...(cardsInLot && { cardsInLot }),
-          ...(athlete && { athletes: athletes.split(',') }),
-          ...(team && { teams: teams.split(',') }),
-          ...(year && { year }),
-          ...(brand && { brand }),
-          ...(set && { set }),
-          ...(features && { features }),
-        } : {}),
-        ...(category && category.slice(-3) === 'Wax' && genre === 'Sports Cards' ? {
-          ...(year && { year }),
-          ...(brand && { brand }),
-          ...(set && { set }),
-        } : {}),
-        ...(category && category.slice(-5) === 'Break' && genre === 'Sports Cards' ? {
-          ...(athlete && { athletes: athlete.split(',') }),
-          ...(team && { teams: team.split(',') }),
-          ...(year && { year }),
-          ...(brand && { brand }),
-          ...(set && { set }),
-        } : {}),
-        ...(genre === 'Sports Memorabilia' ? {
-          ...(athlete && { athlete }),
-          ...(team && { team }),
-          ...(year && { year }),
-        } : {}),
-        listingType: listingType || 'fixed',
-        ...(listingType === 'auction' ? { duration: duration || 0 } : {}),
-        offerable: offerable || false,
-        scheduled: scheduled || false,
-        ...(scheduled ? { date: date || '', time: time || '' } : {}),
-        shippingType: shippingType || 'flat',
-        ...(shippingType === 'variable' ? { weight: weight || 0, shippingProfile: shippingProfile || '' } : { shippingCost: shippingCost || 0 }),
-        likes: 0,
-        ownerUID: req.body.ownerUID, 
-        createdAt: new Date(),
-        random: Math.random(),
-      };
+      images: downloadURLs || [],
+      title: title || '',
+      description: description || '',
+      price: price || 0,
+      quantity: quantity || 1,
+      category: category || '',
+      sold: false,
+      ...(category && category.slice(-7) === 'Singles' && genre === 'Sports Cards'
+        ? {
+            ...(athlete && { athlete }),
+            ...(team && { team }),
+            ...(year && { year }),
+            ...(brand && { brand }),
+            ...(set && { set }),
+            ...(features && { features }),
+            ...(parallel && { parallel }),
+            ...(printRun && { printRun }),
+          }
+        : {}),
+      ...(category && category.slice(-3) === 'Lot' && genre === 'Sports Cards'
+        ? {
+            ...(cardsInLot && { cardsInLot }),
+            ...(athletes && { athletes: athletes.split(',') }),
+            ...(teams && { teams: teams.split(',') }),
+            ...(year && { year }),
+            ...(brand && { brand }),
+            ...(set && { set }),
+            ...(features && { features }),
+          }
+        : {}),
+      ...(category && category.slice(-3) === 'Wax' && genre === 'Sports Cards'
+        ? {
+            ...(year && { year }),
+            ...(brand && { brand }),
+            ...(set && { set }),
+          }
+        : {}),
+      ...(category && category.slice(-5) === 'Break' && genre === 'Sports Cards'
+        ? {
+            ...(athletes && { athletes: athletes.split(',') }),
+            ...(teams && { teams: teams.split(',') }),
+            ...(year && { year }),
+            ...(brand && { brand }),
+            ...(set && { set }),
+          }
+        : {}),
+      ...(genre === 'Sports Memorabilia'
+        ? {
+            ...(athlete && { athlete }),
+            ...(team && { team }),
+            ...(year && { year }),
+          }
+        : {}),
+      listingType: listingType || 'fixed',
+      ...(listingType === 'auction' && { duration: duration || 0 }),
+      ...(listingType === 'auction' && { bids: [] }),
+      ...(listingType === 'auction' && { bidCount: 0 }),
+      offerable: offerable || false,
+      scheduled: scheduled || false,
+      ...(scheduled ? { date: date || '', time: time || '' } : {}),
+      shippingType: shippingType || 'flat',
+      ...(shippingType === 'variable'
+        ? { weight: weight || 0, shippingProfile: shippingProfile || '' }
+        : { shippingCost: shippingCost || 0 }),
+      likes: 0,
+      ownerUID: ownerUID,
+      createdAt: new Date(),
+      ...(listingType === 'auction' && {
+        endDate: new Date(Date.now() + (duration || 0) * 1000),
+      }),
+      random: Math.random(),
+    };
 
     const docRef = await db.collection('listings').add(docData);
 
-    await db.collection('userData').doc(req.body.ownerUID).update({
-      listings: arrayUnion(docRef.id),
+    await db.collection('userData').doc(ownerUID).update({
+      listings: FieldValue.arrayUnion(docRef.id),
     });
 
     res.status(200).send({ message: 'Listing added successfully!', listingUrl: `/listing/${docRef.id}` });
   } catch (error) {
-    res.status(500).send({ error: 'Failed to add listing.' });
+    console.error('Error adding listing:', error.message);
+    res.status(500).send({ error: 'Failed to add listing. Please try again.' });
   }
 };
 
@@ -89,7 +146,7 @@ export const fetchRandomListings = async (req, res) => {
           .where('random', sortDirection, randInt)
           .limit(parseInt(numListings, 10))
           .get();
-    }else if (sellerId != 'undefined'){
+    }else if (sellerId != 'undefined'){     
       querySnapshot = await listingsRef
           .where('ownerUID', '==', sellerId)
           .where('sold','==', !Boolean(active))
@@ -108,14 +165,14 @@ export const fetchRandomListings = async (req, res) => {
     // If no documents are found, switch direction and try again
     if (querySnapshot.empty) {
       const alternateDirection = sortDirection === '<=' ? '>=' : '<=';
-      if(category){
+      if(category != 'undefined'){
         querySnapshot = await listingsRef
             .where('category', '==', category)
             .where('sold','==', !Boolean(active))
             .where('random', alternateDirection, randInt)
             .limit(parseInt(numListings, 10))
             .get();
-      }else if (sellerId){
+      }else if (sellerId != 'undefined'){
         querySnapshot = await listingsRef
             .where('ownerUID', '==', sellerId)
             .where('sold','==', !Boolean(active))
@@ -221,6 +278,153 @@ export const fetchOwnerListingsByRecent = async (req, res) => {
     }
 };
 
+export const fetchMostExpensive = async (req, res) => {
+  try {
+    const listingsRef = db.collection('listings');
+
+    const querySnapshot = await listingsRef
+      .where('bidCount', '>', 0) 
+      .orderBy('price', 'desc') 
+      .limit(10) 
+      .get();
+
+    if (querySnapshot.empty) {
+      return res.status(404).send({ error: 'No listings found' });
+    }
+
+    // Map results
+    const listings = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    res.status(200).send({
+      message: 'Listings retrieved successfully',
+      listings,
+    });
+  } catch (error) {
+    console.error('Error fetching listings:', error);
+    res.status(500).send({ error: 'Failed to retrieve listings' });
+  }
+};
+
+export const fetchMostBid = async (req, res) => {
+  try {
+    const listingsRef = db.collection('listings');
+
+    // Query Firestore
+    const querySnapshot = await listingsRef
+      .where('bidCount', '>', 0) 
+      .orderBy('bidCount', 'desc') 
+      .limit(10)
+      .get();
+
+    if (querySnapshot.empty) {
+      return res.status(404).send({ error: 'No listings found' });
+    }
+
+    // Map results
+    const listings = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    res.status(200).send({
+      message: 'Listings retrieved successfully',
+      listings,
+    });
+  } catch (error) {
+    console.error('Error fetching listings:', error);
+    res.status(500).send({ error: 'Failed to retrieve listings' });
+  }
+};
+
+export const fetchMostLiked = async (req, res) => {
+  try {
+    const listingsRef = db.collection('listings');
+
+    const querySnapshot = await listingsRef
+      .where('likes', '>', 0) 
+      .orderBy('likes', 'desc') 
+      .limit(10) 
+      .get();
+
+    if (querySnapshot.empty) {
+      return res.status(404).send({ error: 'No listings found' });
+    }
+
+    const listings = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    res.status(200).send({
+      message: 'Listings with the most likes retrieved successfully',
+      listings,
+    });
+  } catch (error) {
+    console.error('Error fetching listings with the most likes:', error);
+    res.status(500).send({ error: 'Failed to retrieve listings' });
+  }
+};
+
+export const fetchEndingSoonest = async (req, res) => {
+  try {
+    const listingsRef = db.collection('listings');
+
+    const querySnapshot = await listingsRef
+      .where('endDate', '>', new Date())
+      .orderBy('endDate', 'asc') 
+      .limit(10) 
+      .get();
+
+    if (querySnapshot.empty) {
+      return res.status(404).send({ error: 'No listings found' });
+    }
+
+    const listings = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    res.status(200).send({
+      message: 'Listings ending the soonest retrieved successfully',
+      listings,
+    });
+  } catch (error) {
+    console.error('Error fetching listings ending the soonest:', error);
+    res.status(500).send({ error: 'Failed to retrieve listings' });
+  }
+};
+
+export const fetchMostRecent = async (req, res) => {
+  try {
+    const listingsRef = db.collection('listings');
+
+    const querySnapshot = await listingsRef
+      .orderBy('createdAt', 'desc')
+      .limit(10) 
+      .get();
+
+    if (querySnapshot.empty) {
+      return res.status(404).send({ error: 'No listings found' });
+    }
+
+    const listings = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    res.status(200).send({
+      message: 'Most recent listings retrieved successfully',
+      listings,
+    });
+  } catch (error) {
+    console.error('Error fetching most recent listings:', error);
+    res.status(500).send({ error: 'Failed to retrieve listings' });
+  }
+};
+
 export const fetchReviews = async (req, res) => {
     try {
         const { sellerId } = req.query;
@@ -229,7 +433,7 @@ export const fetchReviews = async (req, res) => {
           return res.status(400).send({ error: 'sellerId is required' });
         }
     
-        const reviewsRef = db.collection('reviews'); // Use Firestore from firebase-admin
+        const reviewsRef = db.collection('reviews'); 
         const querySnapshot = await reviewsRef
           .where('sellerId', '==', sellerId)
           .orderBy('createdAt', 'desc')
@@ -240,14 +444,14 @@ export const fetchReviews = async (req, res) => {
           const reviewData = doc.data();
           const reviewerId = reviewData.reviewerId;
     
-          // Fetch the reviewer's profile picture and username from the users collection
+          
           const userDoc = await db.collection('userData').doc(reviewerId).get();
           const userData = userDoc.exists ? userDoc.data() : { pfp: null, username: 'Unknown' };
     
-          // Combine review data with reviewer information
+          
           return {
             ...reviewData,
-            createdAt: reviewData.createdAt.toDate().toISOString(), // Convert Firestore Timestamp to ISO string
+            createdAt: reviewData.createdAt.toDate().toISOString(), 
             reviewerPfp: userData.pfp,
             reviewerUsername: userData.username,
           };

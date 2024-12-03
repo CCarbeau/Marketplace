@@ -128,7 +128,7 @@ const RenderBottomBar: React.FC<BottomBarProps> = ({listing: listing, isOwner: i
                         className='flex-1 basis-1/3 bg-darkerWhite active:bg-gray rounded-xl justify-center items-center h-full'
                         onPress={handleCustomBid}
                     >
-                        <StyledText className='text-black text-lg font-bold text-center border-2'>Custom</StyledText>
+                        <StyledText className='text-black text-lg font-bold text-center'>Custom</StyledText>
                     </StyledPressable>
                 </StyledView>
             )}
