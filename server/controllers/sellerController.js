@@ -106,7 +106,7 @@ export const fetchSeller = async (req, res) => {
     try{
         const { id } = req.query; 
     
-        if (!id){
+        if (!id ){
           return res.status(400).send({error: 'No id provided'});
         }
     
@@ -190,7 +190,7 @@ export const fetchConversations = async (req, res) => {
         const interlocutorId = conversationData.participants.find((participantId) => participantId !== id);
 
         if (!interlocutorId) {
-          throw new Error('Interlocutor ID not found in conversation');
+          return undefined;
         }
 
         const interlocutorDoc = await usersRef.doc(interlocutorId).get();

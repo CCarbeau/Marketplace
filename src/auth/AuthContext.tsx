@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from './firebaseConfig';
+import { auth, db } from './firebaseConfig';
 import { AuthContextProps, ActiveUser } from '@/types/interfaces';
+import { doc, updateDoc } from 'firebase/firestore';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -19,7 +20,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
   
       if (currentUser) {
-        await fetchUserProfile(currentUser.uid);  // Only call when user is not null
+        await fetchUserProfile(currentUser.uid);  
       } else {
         setProfile(null);
       }
@@ -31,31 +32,68 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
   
   const fetchUserProfile = async (uid: string) => {
-    try{
-      const response = await fetch(`${API_URL}/auth/fetch-active-user/?id=${uid}`, {
+    try {
+      // Fetch the active user profile
+      const profileResponse = await fetch(`${API_URL}/auth/fetch-active-user/?id=${uid}`, {
         method: 'GET',
-      })
-
-      if(!response.ok){
-        throw new Error(`Error fetching active user ${response.status}`)
+      });
+  
+      if (!profileResponse.ok) {
+        throw new Error(`Error fetching active user ${profileResponse.status}`);
       }
-
-      const data = await response.json();
-
-      setProfile(data);
-    }catch (error){
-      console.log('Error fetching active user', error)
+  
+      const profileData = await profileResponse.json();
+  
+      // Fetch the user's conversations
+      const conversationsResponse = await fetch(`${API_URL}/sellers/fetch-conversations/?id=${uid}`, {
+        method: 'GET',
+      });
+  
+      if (!conversationsResponse.ok) {
+        throw new Error(`Error fetching conversations ${conversationsResponse.status}`);
+      }
+  
+      const conversationsData = await conversationsResponse.json();
+  
+      // Combine profile data with conversations
+      const combinedProfile = {
+        ...profileData,
+        conversations: conversationsData.conversations || [],
+      };
+  
+      // Update the profile in state
+      setProfile(combinedProfile);
+    } catch (error) {
+      console.error('Error fetching user profile or conversations:', error);
     }
-  }
+  };
+  
 
-  const updateProfile = (updatedData: Partial<ActiveUser>) => {
+  const updateProfile = async (updatedData: Partial<ActiveUser>) => {
     setProfile((prevProfile) => {
-        if (!prevProfile) {
-            return null;
-        }
-
-        return { ...prevProfile, ...updatedData };
+      if (!prevProfile) {
+        return null;
+      }
+  
+      // Merge local profile with updated data
+      return { ...prevProfile, ...updatedData };
     });
+
+    if (updatedData.conversations) {
+      return;
+    }
+  
+    try {
+      // Update Firestore document
+      const userId = profile?.id; // Ensure `id` corresponds to Firestore document ID
+      if (userId) {
+        const userDocRef = doc(db, 'userData', userId);
+        await updateDoc(userDocRef, updatedData);
+        console.log('Profile updated successfully in Firestore');
+      }
+    } catch (error) {
+      console.error('Error updating profile in Firestore:', error);
+    }
   };
 
   // Sign in

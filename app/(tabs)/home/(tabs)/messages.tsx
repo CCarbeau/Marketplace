@@ -16,7 +16,6 @@ const StyledPressable = styled(Pressable)
 const StyledImage = styled(Image)
 const StyledView = styled(View)
 const StyledText = styled(Text)
-const StyledSafeAreaView = styled(SafeAreaView);
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -45,20 +44,13 @@ const messages = () => {
 
     useEffect(() => {
         const fetchConversations = async () => {
-            const response = await fetch(`${API_URL}/sellers/fetch-conversations?id=${profile?.id}`, {
-                method: 'GET',
-            })
-
-            if(!response.ok){
-                throw new Error('Error fetching conversations')
+            if (profile?.conversations && Array.isArray(profile.conversations)) {
+                const validConversations = profile.conversations.filter(convo => convo !== null && convo.interlocutor);
+                setConversations(validConversations);
             }
-
-            const data = await response.json();
-            setConversations(data.conversations);
         }
-
         fetchConversations();
-    }, [profile?.id])
+    }, [profile?.conversations])
 
     const onRefresh = React.useCallback(() => {
         setRefreshing(true);
@@ -73,6 +65,10 @@ const messages = () => {
     }
 
     const renderItem = ({ item }: { item: Conversation }) => {
+        if (!item.interlocutor) {
+            return null; 
+        }
+
         const lastUpdated = new Date(Number(item.updatedAt._seconds) * 1000);
     
         return (

@@ -31,7 +31,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const MessagesPage = () => {
   const router = useRouter();
-  const { profile } = useContext(AuthContext) as AuthContextProps;
+  const { profile, updateProfile } = useContext(AuthContext) as AuthContextProps;
   const [loading, setLoading] = useState(false);
   const params = useLocalSearchParams();
   const layout = useWindowDimensions();
@@ -57,6 +57,11 @@ const MessagesPage = () => {
 
   useEffect(()=> {
     const fetchConversationData = async () => {
+      
+      if(!profile?.conversations.find((conversation) => conversation.id === conversationId) && conversationId !== undefined){
+        updateProfile({})
+      }
+      
       const response = await fetch(`${API_URL}/sellers/fetch-messages?conversationId=${conversationId}`, {
         method: 'GET',
       });
@@ -72,7 +77,7 @@ const MessagesPage = () => {
     }
 
     fetchConversationData();
-  })
+  },[profile?.conversations, conversationId])
 
   const handleLoadMore = () => {
 
@@ -80,28 +85,62 @@ const MessagesPage = () => {
 
   const handleSend = async () => {
     if (message && message.trim().length > 0) {
+      if (!profile?.id) {
+        console.error('Profile ID is undefined');
+        return;
+      }
+  
       const data = {
-        message: message,
-        senderId: profile?.id,
-        recipientId: recipientId, 
+        message: message.trim(),
+        senderId: profile.id,
+        recipientId: recipientId,
       };
-
+  
       const response = await fetch(`${API_URL}/user-input/send-message`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json', 
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
-      })
+      });
+  
+      if (response.ok) {
+        const now = new Date();
+        const sentMessage: Message = {
+          message: message.trim(),
+          sender: profile.id,
+          sentAt: {
+            _seconds: Math.floor(now.getTime() / 1000).toString(),
+            _nanoseconds: ((now.getTime() % 1000) * 1000000).toString(),
+          },
+        };
+  
+        // Update the local conversation state
+        setConversation((prev) => (prev ? [sentMessage, ...prev] : [sentMessage]));
 
-      if(response.ok){
-        setMessage(''); 
-        Keyboard.dismiss(); 
-      }else{
+        // Update the global profile.conversations
+        const updatedConversations = profile.conversations.map((conv) => {
+          if (conv.id === conversationId) {
+            return {
+              ...conv,
+              lastMessage: sentMessage.message,
+              updatedAt: sentMessage.sentAt,
+            };
+          }
+          return conv;
+        });
+
+        updateProfile({ conversations: updatedConversations });
+  
+        setMessage(''); // Clear the input field
+        Keyboard.dismiss(); // Dismiss the keyboard
+      } else {
         console.error('Error sending message');
       }
     }
-  }
+  };  
+  
+  
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();

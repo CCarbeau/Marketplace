@@ -79,29 +79,36 @@ export interface Layout {
 }  
 
 export interface ActiveUser {
-    address: {}, 
-    banner: string,
-    bids: string[],
-    collection: string[],
-    description: string,
-    firstName: string, 
-    following: string[],
-    id: string,
-    itemsSold: number,
-    interests: string[],
-    lastName: string, 
-    listings: string[], 
-    liked: string[],
-    name: string,
-    numberOfFollowers: number,
-    numberOfFollowing: number, 
-    payment: {},
-    pfp: string,
-    rating: number,
-    recentSearches: string[],
-    seller: boolean,
-    username: string,
+    address: {};
+    banner: string;
+    bids: string[];
+    collection: string[];
+    description: string;
+    firstName: string;
+    following: string[];
+    id: string;
+    itemsSold: number;
+    interests: string[];
+    lastName: string;
+    listings: string[];
+    liked: string[];
+    name: string;
+    numberOfFollowers: number;
+    numberOfFollowing: number;
+    payment: {};
+    pfp: string;
+    rating: number;
+    recentSearches: RecentSearch[]; 
+    seller: boolean;
+    username: string;
+    conversations: Conversation[];
 }
+  
+  
+export type RecentSearch =
+    | { type: "seller", seller: Seller }
+    | { type: "searchTerm", term: string };
+  
 
 export interface Message {
     sender: string,

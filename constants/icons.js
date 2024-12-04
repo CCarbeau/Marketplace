@@ -36,6 +36,8 @@ import exclamation from '..//assets/icons/!.png'
 import edit from '..//assets/icons/edit.png'
 import promo from '..//assets/icons/promo.png'
 import plus from '..//assets/icons/+.png'
+import recent from '..//assets/icons/recent.png'
+import starFull from '..//assets/icons/starFull.png'
 
 
 export default {
@@ -77,4 +79,6 @@ export default {
   edit,
   promo,
   plus,
+  recent,
+  starFull,
 };

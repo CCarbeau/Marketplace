@@ -1,12 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { View, TextInput, ScrollView, Pressable, Text, Image, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
-import {liteClient as algoliasearch, MultipleQueriesResponse } from 'algoliasearch/lite';
+import {liteClient as algoliasearch } from 'algoliasearch/lite';
+import { MultipleQueriesResponse } from 'algoliasearch';
 import { styled } from 'nativewind';
-import { Listing } from '@/types/interfaces';
+import { AuthContextProps, Listing, RecentSearch, Seller } from '@/types/interfaces';
 import Section from './Section';
 import icons from '@/constants/icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { AuthContext } from '@/src/auth/AuthContext';
+import { handleProfile } from '@/src/functions/userInput';
 
 const StyledPressable = styled(Pressable);
 const StyledImage = styled(Image);
@@ -20,12 +23,13 @@ const Search = () => {
   const textInputRef = useRef<TextInput>(null);
   const router = useRouter();
 
+  const { profile, updateProfile } = useContext(AuthContext) as AuthContextProps;
+
   // Algolia initialization
   const ALGOLIA_APP_ID = process.env.EXPO_PUBLIC_ALGOLIA_APP_ID;
   const ALGOLIA_SEARCH_API_KEY = process.env.EXPO_PUBLIC_ALGOLIA_SEARCH_KEY;
-  const ALGOLIA_INDEX_NAME = 'listings_index';
 
-  if (!ALGOLIA_APP_ID || !ALGOLIA_SEARCH_API_KEY || !ALGOLIA_INDEX_NAME) {
+  if (!ALGOLIA_APP_ID || !ALGOLIA_SEARCH_API_KEY) {
     console.error('Algolia environment variables are missing.');
     return null;
   }
@@ -34,32 +38,56 @@ const Search = () => {
 
   // State variables
   const [searchQuery, setSearchQuery] = useState('');
-  const [recentSearches, setRecentSearches] = useState<string[]>(['Laptop', 'Shoes', 'Camera']);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [listingSuggestions, setListingSuggestions] = useState<string[]>([]);
+  const [userSuggestions, setUserSuggestions] = useState<Seller[]>([]);
   const [showOverlay, setShowOverlay] = useState(false);
 
   const handleSearchSubmit = (query: string) => {
     if (query.trim()) {
       router.push({
-        pathname: '/(tabs)/search/results',
-        params: { query },
+        pathname: "/(tabs)/search/results",
+        params: { query: searchQuery },
       });
     }
   };
 
-  const fetchSuggestions = async (query: string) => {
+  const handleChangeText = (query: string) => {
+    setSearchQuery(query);
+    fetchListingSuggestions(query);
+    fetchUserSuggestions(query);
+  }
+
+  const fetchListingSuggestions = async (query: string) => {
     try {
-      const { results } = await client.search({
+      const { results } : {results: MultipleQueriesResponse} = await client.search({
         requests: [
           {
-            indexName: ALGOLIA_INDEX_NAME,
+            indexName: 'listings_index',
             query,
             hitsPerPage: 5,
           },
         ],
       });
-      const newSuggestions = results.map((hit: any) => hit.title);
-      setSuggestions(newSuggestions);
+      const newSuggestions = results[0].hits.map((hit: any) => hit.title);
+      setListingSuggestions(newSuggestions);
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+    }
+  };
+
+  const fetchUserSuggestions = async (query: string) => {
+    try {
+      const { results } : {results: MultipleQueriesResponse} = await client.search({
+        requests: [
+          {
+            indexName: 'userData_index',
+            query,
+            hitsPerPage: 5,
+          },
+        ],
+      });
+      const newSuggestions = results[0].hits
+      setUserSuggestions(newSuggestions);
     } catch (error) {
       console.error('Error fetching suggestions:', error);
     }
@@ -84,11 +112,87 @@ const Search = () => {
   };
 
   const handleSuggestionPress = (query: string) => {
-    setRecentSearches((prev) => [...new Set([query, ...prev])]);
     setShowOverlay(false);
-    router.push({ pathname: '/(tabs)/search/results', params: { query } });
-  };
+    textInputRef.current?.blur(); 
+    Keyboard.dismiss(); 
+    handleBlur(); 
+    setSearchQuery('');
+  
+    const newSearch: RecentSearch = { type: 'searchTerm', term: query };
+  
+    const updatedRecentSearches = addToRecentSearches(newSearch, profile?.recentSearches || []);
+  
+    updateProfile({
+      recentSearches: updatedRecentSearches,
+    });
 
+  
+    router.push({
+      pathname: "/(tabs)/search/results",
+      params: { query: query },
+    });
+  };
+  
+
+  const handleUserSuggestionPress = (seller : any) => {
+    setShowOverlay(false);
+    textInputRef.current?.blur(); 
+    Keyboard.dismiss(); 
+    handleBlur(); 
+    setSearchQuery('');
+  
+    const newSellerSearch: RecentSearch = {
+      type: 'seller',
+      seller: seller, 
+    };
+  
+    const updatedRecentSearches = addToRecentSearches(newSellerSearch, profile?.recentSearches || []);
+  
+    updateProfile({
+      recentSearches: updatedRecentSearches,
+    });
+    
+    handleProfile(seller.objectID, router, profile);
+  };  
+
+  const handleEnter = () => {
+    setShowOverlay(false);
+    textInputRef.current?.blur(); 
+    Keyboard.dismiss(); 
+    handleBlur(); 
+    
+    const newSearch: RecentSearch = { type: 'searchTerm', term: searchQuery };
+  
+    const updatedRecentSearches = addToRecentSearches(newSearch, profile?.recentSearches || []);
+  
+    updateProfile({
+      recentSearches: updatedRecentSearches,
+    });
+
+  
+    router.push({
+      pathname: "/(tabs)/search/results",
+      params: { query: searchQuery },
+    });
+
+    setSearchQuery('');
+  }
+
+  const addToRecentSearches = (
+    newItem: RecentSearch,
+    recentSearches: RecentSearch[]
+  ): RecentSearch[] => {
+    const filtered = recentSearches.filter((item) => {
+      if (item.type === 'seller' && newItem.type === 'seller') {
+        return item.seller.id !== newItem.seller.id; 
+      } else if (item.type === 'searchTerm' && newItem.type === 'searchTerm') {
+        return item.term !== newItem.term; 
+      }
+      return true; 
+    });
+  
+    return [newItem, ...filtered].slice(0, 10);
+  };
 
   return (
     <StyledView className="flex-1 p-4 mt-4">
@@ -101,6 +205,8 @@ const Search = () => {
                     textInputRef.current?.blur(); 
                     Keyboard.dismiss(); 
                     handleBlur(); 
+                    setShowOverlay(false);
+                    setSearchQuery('');
                   }}>
                   <StyledImage
                       source={icons.carrotBlack}
@@ -116,17 +222,14 @@ const Search = () => {
             />
             <StyledTextInput
               value={searchQuery}
-              onChangeText={setSearchQuery}
+              onChangeText={(text) => {handleChangeText(text)}}
               onFocus={handleFocus}
               onBlur={handleBlur}
               placeholder="Search..."
               className="flex-1 text-sm"
               onSubmitEditing={() => {
                 if (searchQuery.trim()) {
-                  router.push({
-                    pathname: '/(tabs)/search/results',
-                    params: { query: searchQuery },
-                  });
+                  handleEnter()
                 }
               }}
             />
@@ -166,37 +269,87 @@ const Search = () => {
       </ScrollView>
 
       {showOverlay && (
-        <StyledView className="absolute top-0 bottom-0 left-0 right-0 bg-white z-10">
-          <ScrollView contentContainerStyle={{ padding: 16}}>
-            <StyledText className='text-lg font-bold mb-4 mt-24'>Recent Searches</StyledText>
-            {recentSearches.map((item, index) => (
-              <StyledPressable
-                key={index}
-                className="flex-row items-center mb-4"
-                onPress={() => handleSuggestionPress(item)}
-              >
-                <StyledImage
-                  source={icons.dollar}
-                  className="w-5 h-5 mr-4"
-                />
-                <StyledText className="text-gray-800">{item}</StyledText>
-              </StyledPressable>
-            ))}
-
-            <StyledText className="text-lg font-bold mt-8 mb-4">Suggestions</StyledText>
-            {suggestions.map((item, index) => (
-              <StyledPressable
-                key={index}
-                className="flex-row items-center mb-4"
-                onPress={() => handleSuggestionPress(item)}
-              >
-                <StyledImage
-                  source={icons.search}
-                  className="w-5 h-5 mr-4"
-                />
-                <StyledText className="text-gray-800">{item}</StyledText>
-              </StyledPressable>
-            ))}
+        <StyledView className="absolute top-0 bottom-0 left-0 right-0 bg-white z-10 pt-4">
+          <ScrollView contentContainerStyle={{ paddingTop: 16}}>
+            {searchQuery.length === 0 ? (
+              <>
+                <StyledText className='text-lg font-bold mb-4 mt-20 pl-4'>Recent</StyledText>
+                {(profile?.recentSearches || []).map((item, index) => (
+                  <StyledView key={index} className="w-full">
+                    {item.type === 'searchTerm' ? (
+                      // Render search term
+                      <StyledPressable
+                        className="flex-row items-center pl-4 pr-4"
+                        onPress={() => handleSuggestionPress(item.term)}
+                      >
+                        <StyledImage source={icons.search} className="h-5 w-5" />
+                        <StyledText className="p-4 font-bold">{item.term}</StyledText>
+                      </StyledPressable>
+                    ) : (
+                      // Render seller profile
+                      <StyledPressable
+                        className="flex-row items-center pl-4 pr-4 active:bg-lightGray"
+                        onPress={() => handleUserSuggestionPress(item.seller)}
+                      >
+                        <StyledImage source={{ uri: item.seller.pfp }} className="h-10 w-10 rounded-full" />
+                        <StyledView className="p-4">
+                          <StyledText className="font-bold">{item.seller.username}</StyledText>
+                          <StyledView className="flex-row items-center">
+                            <StyledText className="text-gray" style={{ fontSize: 12 }}>
+                              {item.seller.rating}
+                            </StyledText>
+                            <StyledImage
+                              source={icons.starFull}
+                              className="w-3 h-3 ml-1 mr-1"
+                              style={{ tintColor: '#FF5757' }}
+                            />
+                            <StyledText className="text-gray" style={{ fontSize: 12 }}>
+                              | {item.seller.numberOfFollowers} Followers
+                            </StyledText>
+                          </StyledView>
+                        </StyledView>
+                      </StyledPressable>
+                    )}
+                    <StyledView className="w-full h-px bg-lightGray" />
+                  </StyledView>
+                ))}
+              </>
+            ):(
+              <>
+                <StyledView className='mt-20'></StyledView>
+                {listingSuggestions.map((item,index)=> (
+                  <StyledView key={index} className='w-full'>
+                    <StyledPressable 
+                      className='flex-row items-center pl-4 pr-4' 
+                      onPress={() => {handleSuggestionPress(item)}}
+                    >
+                      <StyledImage source={icons.search} className='h-5 w-5' />
+                      <StyledText className='p-4 font-bold'>{item}</StyledText>
+                    </StyledPressable>
+                    <StyledView className='w-full h-px bg-lightGray' />
+                  </StyledView>
+                ))}
+                {userSuggestions.map((item,index)=> (
+                  <StyledView key={index} className='w-full'>
+                    <StyledPressable 
+                      className='flex-row items-center pl-4 pr-4 active:bg-lightGray' 
+                      onPress={() => {handleUserSuggestionPress(item)}}
+                    >
+                      <StyledImage source={{uri: item.pfp}} className='h-10 w-10 rounded-full' />
+                      <StyledView className='p-4'>
+                        <StyledText className='font-bold'>{item.username}</StyledText>
+                        <StyledView className='flex-row items-center'>
+                          <StyledText className='text-gray' style={{fontSize: 12}}>{item.rating}</StyledText>
+                          <StyledImage source={icons.starFull} className='w-3 h-3 ml-1 mr-1' style={{tintColor:'#FF5757'}}/>
+                          <StyledText className='text-gray' style={{fontSize: 12}}>| {item.numberOfFollowers} Followers</StyledText>
+                        </StyledView>
+                      </StyledView>
+                    </StyledPressable>
+                    <StyledView className='w-full h-px bg-lightGray' />
+                  </StyledView>
+                ))}
+              </>
+            )}
           </ScrollView>
         </StyledView>
       )}
