@@ -54,7 +54,7 @@ const ResultsPage = () => {
     fetchResults();
   }, [query]);
 
-  const [sorting, setSorting] = useState<{ price: 'asc' | 'desc' | null }>({ price: null });
+  const [sorting, setSorting] = useState<{ price: 'asc' | 'desc' | null, likes: 'asc' | 'desc' | null, bids: 'asc' | 'desc' | null, time: 'asc' | 'desc' | null}>({ price: null, likes: null, bids: null, time: null });
 
   const fetchResults = async () => {
     try {
@@ -365,9 +365,19 @@ const ResultsPage = () => {
 
   const handleReset = () => {
     rotation.value = withTiming(rotation.value - 360, { duration: 500 }); // Rotate counter-clockwise 360 degrees
-    setSorting({ price: null });
+    clearSort('', null);
     fetchResults();
   };
+
+  const clearSort = (field: string, value: "desc" | "asc" | null) => {
+    setSorting({
+      price: field === 'price' ? value : null,
+      likes: field === 'likes' ? value : null,
+      bids: field === 'bids' ? value : null,
+      time: field === 'time' ? value : null,
+    });
+  };  
+  
   
   const applySorting = () => {
     fetchResults();
@@ -628,22 +638,41 @@ const ResultsPage = () => {
             <StyledView className="w-full h-px bg-lightGray" />
 
             {/* Sort Options */}
-            <StyledView className='pt-2 pl-4 pr-4'>
+            <StyledView className='pl-4 pr-4'>
               <StyledPressable
-                className=""
+                className="active:opacity-50 pt-2"
                 onPress={navigateToSecondPage}
               >
                 <StyledView className='flex-row justify-between items-center'>
                   <StyledText className='font-bold text-lg'>Sort</StyledText>
                   <StyledView className='flex-row items-center'>
-                    <StyledText className='text-gray'>
-                      {sorting.price}
+                    <StyledText className="text-gray">
+                      {sorting.price === 'desc' ? (
+                        "Price Descending"
+                      ) : sorting.price === 'asc' ? (
+                        "Price Ascending"
+                      ) : sorting.likes === 'desc' ? (
+                        "Likes Descending"
+                      ) : sorting.likes === 'asc' ? (
+                        "Likes Ascending"
+                      ) : sorting.bids === 'desc' ? (
+                        "Bids Descending"
+                      ) : sorting.bids === 'asc' ? (
+                        "Bids Ascending"
+                      ) : sorting.time === 'desc' ? (
+                        "Ending Soonest"
+                      ) : sorting.time === 'asc' ? (
+                        "Newest"
+                      ) : (
+                        ""
+                      )}
                     </StyledText>
                     <StyledImage className='ml-2 w-4 h-4' source={icons.carrotBlack} style={{opacity: 75, transform:[{rotate:'-90deg'}]}}/>
                   </StyledView>
                 </StyledView>
                 <StyledView className="w-full h-px bg-lightGray mt-2" />
               </StyledPressable> 
+
               {/* Apply Button */}
               <StyledPressable
                 className="mt-6 bg-primary py-3 rounded-lg items-center justify-center"
@@ -661,46 +690,148 @@ const ResultsPage = () => {
           <StyledView className="w-1/2">
             <StyledView className="flex-row items-center justify-center w-full">
               <StyledPressable
-                className="absolute left-4 active:bg-lightGray rounded-full h-8 w-8 items-center justify-center"
+                className="absolute left-2 active:bg-lightGray rounded-full h-8 w-8 items-center justify-center"
                 onPress={navigateToFirstPage}
               >
-                <StyledImage source={icons.carrotBlack} className="w-5 h-5" />
+                <StyledImage source={icons.carrotBlack} style={{tintColor:'#FF5757', transform:[{rotate:'90deg'}]}} className="w-5 h-5" />
               </StyledPressable>
               <StyledText className="font-bold text-xl p-2">Sort Options</StyledText>
             </StyledView>
             <StyledView className="w-full h-px bg-lightGray" />
 
             {/* Sorting Options */}
-            <StyledView className="mt-4">
-              <StyledText className="font-bold text-lg mb-2">Sort by Price</StyledText>
-              <StyledView className="flex-row space-x-2">
-                <StyledPressable
-                  className={`rounded-lg px-4 py-2 ${
-                    sorting.price === 'asc' ? 'bg-primary text-white' : 'bg-gray-200'
-                  }`}
-                  onPress={() => setSorting({ ...sorting, price: 'asc' })}
-                >
-                  <StyledText>Low to High</StyledText>
-                </StyledPressable>
-                <StyledPressable
-                  className={`rounded-lg px-4 py-2 ${
-                    sorting.price === 'desc' ? 'bg-primary text-white' : 'bg-gray-200'
-                  }`}
-                  onPress={() => setSorting({ ...sorting, price: 'desc' })}
-                >
-                  <StyledText>High to Low</StyledText>
-                </StyledPressable>
+            <StyledView className="mt-4 pt-2 pl-4 pr-4 gap-y-4">
+              {/* Sort by Price */}
+              <StyledView className="flex-row justify-between items-center">
+                <StyledText className="font-bold text-darkGray w-28" style={{ fontSize: 16 }}>
+                  Sort by Price:
+                </StyledText>
+                <StyledView className="flex-row space-x-2">
+                  <StyledPressable
+                    className={`rounded-lg px-4 border-2 active:opacity-50 ${
+                      sorting.price === 'desc' ? 'bg-primary border-primary' : ''
+                    }`}
+                    onPress={() => {
+                      clearSort('price', sorting.price === 'desc' ? null : 'desc'); // Toggle "High to Low"
+                    }}
+                  >
+                    <StyledText className={`pt-2 pb-2 font-bold ${sorting.price === 'desc' && 'text-white'}`}>
+                      High to Low
+                    </StyledText>
+                  </StyledPressable>
+                  <StyledPressable
+                    className={`rounded-lg px-4 border-2 active:opacity-50 ${
+                      sorting.price === 'asc' ? 'bg-primary border-primary' : ''
+                    }`}
+                    onPress={() => {
+                      clearSort('price', sorting.price === 'asc' ? null : 'asc'); // Toggle "Low to High"
+                    }}
+                  >
+                    <StyledText className={`pt-2 pb-2 font-bold ${sorting.price === 'asc' && 'text-white'}`}>
+                      Low to High
+                    </StyledText>
+                  </StyledPressable>
+                </StyledView>
               </StyledView>
-              {/* Apply Button */}
-              <StyledPressable
-                className="mt-6 bg-primary py-3 rounded-lg items-center justify-center"
-                onPress={() => {
-                  applySorting();
-                  toggleFilterModal();
-                }}
-              >
-                <StyledText className="text-white font-bold">Apply</StyledText>
-              </StyledPressable>
+
+              {/* Sort by Likes */}
+              <StyledView className="flex-row justify-between items-center">
+                <StyledText className="font-bold text-darkGray w-28" style={{ fontSize: 16 }}>
+                  Sort by Likes:
+                </StyledText>
+                <StyledView className="flex-row space-x-2">
+                  <StyledPressable
+                    className={`rounded-lg px-4 border-2 active:opacity-50 ${
+                      sorting.likes === 'desc' ? 'bg-primary border-primary' : ''
+                    }`}
+                    onPress={() => {
+                      clearSort('likes', sorting.likes === 'desc' ? null : 'desc'); // Toggle "High to Low"
+                    }}
+                  >
+                    <StyledText className={`pt-2 pb-2 font-bold ${sorting.likes === 'desc' && 'text-white'}`}>
+                      High to Low
+                    </StyledText>
+                  </StyledPressable>
+                  <StyledPressable
+                    className={`rounded-lg px-4 border-2 active:opacity-50 ${
+                      sorting.likes === 'asc' ? 'bg-primary border-primary' : ''
+                    }`}
+                    onPress={() => {
+                      clearSort('likes', sorting.likes === 'asc' ? null : 'asc'); // Toggle "Low to High"
+                    }}
+                  >
+                    <StyledText className={`pt-2 pb-2 font-bold ${sorting.likes === 'asc' && 'text-white'}`}>
+                      Low to High
+                    </StyledText>
+                  </StyledPressable>
+                </StyledView>
+              </StyledView>
+
+              {/* Sort by Bids */}
+              <StyledView className="flex-row justify-between items-center">
+                <StyledText className="font-bold text-darkGray w-28" style={{ fontSize: 16 }}>
+                  Sort by Bids:
+                </StyledText>
+                <StyledView className="flex-row space-x-2">
+                  <StyledPressable
+                    className={`rounded-lg px-4 border-2 active:opacity-50 ${
+                      sorting.bids === 'desc' ? 'bg-primary border-primary' : ''
+                    }`}
+                    onPress={() => {
+                      clearSort('bids', sorting.bids === 'desc' ? null : 'desc'); // Toggle "High to Low"
+                    }}
+                  >
+                    <StyledText className={`pt-2 pb-2 font-bold ${sorting.bids === 'desc' && 'text-white'}`}>
+                      High to Low
+                    </StyledText>
+                  </StyledPressable>
+                  <StyledPressable
+                    className={`rounded-lg px-4 border-2 active:opacity-50 ${
+                      sorting.bids === 'asc' ? 'bg-primary border-primary' : ''
+                    }`}
+                    onPress={() => {
+                      clearSort('bids', sorting.bids === 'asc' ? null : 'asc'); // Toggle "Low to High"
+                    }}
+                  >
+                    <StyledText className={`pt-2 pb-2 font-bold ${sorting.bids === 'asc' && 'text-white'}`}>
+                      Low to High
+                    </StyledText>
+                  </StyledPressable>
+                </StyledView>
+              </StyledView>
+
+              {/* Sort by Time */}
+              <StyledView className="flex-row justify-between items-center">
+                <StyledText className="font-bold text-darkGray w-28" style={{ fontSize: 16 }}>
+                  Sort by Time:
+                </StyledText>
+                <StyledView className="flex-row space-x-2">
+                  <StyledPressable
+                    className={`rounded-lg px-4 border-2 active:opacity-50 ${
+                      sorting.time === 'desc' ? 'bg-primary border-primary' : ''
+                    }`}
+                    onPress={() => {
+                      clearSort('time', sorting.time === 'desc' ? null : 'desc'); // Toggle "Ending Soonest"
+                    }}
+                  >
+                    <StyledText className={`pt-2 pb-2 font-bold ${sorting.time === 'desc' && 'text-white'}`}>
+                      Ending Soonest
+                    </StyledText>
+                  </StyledPressable>
+                  <StyledPressable
+                    className={`rounded-lg px-4 border-2 active:opacity-50 ${
+                      sorting.time === 'asc' ? 'bg-primary border-primary' : ''
+                    }`}
+                    onPress={() => {
+                      clearSort('time', sorting.time === 'asc' ? null : 'asc'); // Toggle "Newest"
+                    }}
+                  >
+                    <StyledText className={`pt-2 pb-2 font-bold ${sorting.time === 'asc' && 'text-white'}`}>
+                      Newest
+                    </StyledText>
+                  </StyledPressable>
+                </StyledView>
+              </StyledView>
             </StyledView>
           </StyledView>
         </Animated.View>
