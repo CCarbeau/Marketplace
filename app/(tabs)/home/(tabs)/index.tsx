@@ -296,7 +296,7 @@ const Index = () => {
 const styles = StyleSheet.create({
   bottomModal: {
     justifyContent: 'flex-end',
-    margin: 0, // Ensures modal takes full width of the screen
+    margin: 0, 
     marginTop: 108,
   },
 });

@@ -2,14 +2,15 @@ import { fontScale, styled } from 'nativewind';
 import {liteClient as algoliasearch, MultipleQueriesResponse} from 'algoliasearch/lite';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { View, TextInput, ScrollView, Pressable, Text, Image, Keyboard, ImageBackground } from 'react-native';
+import { View, TextInput, ScrollView, Pressable, Text, Image, Keyboard, ImageBackground, Dimensions} from 'react-native';
 import { AuthContextProps, Listing, RawTimestamp, RecentSearch, Seller } from '@/types/interfaces';
 import icons from '@/constants/icons';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { SlideInUp, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { AuthContext } from '@/src/auth/AuthContext';
 import { handleProfile } from '@/src/functions/userInput';
 import { useRouter } from 'expo-router';
 import { fetchSeller } from '@/src/functions/fetch';
+import Modal from 'react-native-modal';
 
 const StyledPressable = styled(Pressable);
 const StyledImage = styled(Image);
@@ -21,6 +22,8 @@ const StyledImageBackground = styled(ImageBackground);
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const ALGOLIA_APP_ID = process.env.EXPO_PUBLIC_ALGOLIA_APP_ID;
 const ALGOLIA_SEARCH_API_KEY = process.env.EXPO_PUBLIC_ALGOLIA_SEARCH_KEY;
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const ResultsPage = () => {
   const { query } : {query: string} = useLocalSearchParams();
@@ -47,35 +50,48 @@ const ResultsPage = () => {
   const client = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_API_KEY);
 
   useEffect(() => {
-    const fetchResults = async () => {
-      try {
-        const { results }: MultipleQueriesResponse = await client.search({
-          requests: [
-            {
-              indexName: 'listings_index',
-              query,
-            },
-          ],
-        });
-
-        const hits = results[0]?.hits || [];
-        const mappedResults: Listing[] = hits.map((hit: any) => ({
-          id: hit.objectID,
-          title: hit.title,
-          description: hit.description,
-          images: hit.images || [],
-          price: hit.price || 0,
-          ownerUID: hit.ownerUID, 
-        }));
-
-        setSearchResults(mappedResults);
-      } catch (error) {
-        console.error('Error fetching Algolia results:', error);
-      }
-    };
 
     fetchResults();
   }, [query]);
+
+  const [sorting, setSorting] = useState<{ price: 'asc' | 'desc' | null }>({ price: null });
+
+  const fetchResults = async () => {
+    try {
+      let indexName = 'listings_index'; // Default index
+
+      // Use appropriate replica index for sorting
+      if (sorting.price === 'asc') {
+        indexName = 'listings_index_price_asc'; // Replace with your replica index
+      } else if (sorting.price === 'desc') {
+        indexName = 'listings_index_price_desc'; // Replace with your replica index
+      }
+
+      const { results }: MultipleQueriesResponse = await client.search({
+        requests: [
+          {
+            indexName,
+            query,
+          },
+        ],
+      });
+
+      const hits = results[0]?.hits || [];
+      const mappedResults: Listing[] = hits.map((hit: any) => ({
+        id: hit.objectID,
+        title: hit.title,
+        description: hit.description,
+        images: hit.images || [],
+        price: hit.price || 0,
+        ownerUID: hit.ownerUID,
+      }));
+
+      setSearchResults(mappedResults);
+    } catch (error) {
+      console.error('Error fetching Algolia results:', error);
+    }
+  };
+
 
   useEffect(() => {
     const augmentResults = async () => {
@@ -311,196 +327,389 @@ const ResultsPage = () => {
     return [newItem, ...filtered].slice(0, 10);
   };
 
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [isSecondPage, setIsSecondPage] = useState(false); // Tracks current modal page
+  const modalAnimatedValue = useSharedValue(0); // Animation for sliding pages
+
+  const animatedModalStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateX: withTiming(modalAnimatedValue.value, { duration: 300 }), // Smooth slide effect
+      },
+    ],
+  }));
+
+  const navigateToSecondPage = () => {
+    setIsSecondPage(true);
+    modalAnimatedValue.value = -screenWidth; // Slide to the second page
+  };
+  
+  const navigateToFirstPage = () => {
+    setIsSecondPage(false);
+    modalAnimatedValue.value = 0; // Slide back to the first page
+  };
+
+  const toggleFilterModal = () => {
+    setFilterModalVisible(!filterModalVisible);
+  }
+
+  const rotation = useSharedValue(0); 
+
+  const resetAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        rotate: `${rotation.value}deg`,
+      },
+    ],
+  }));
+
+  const handleReset = () => {
+    rotation.value = withTiming(rotation.value - 360, { duration: 500 }); // Rotate counter-clockwise 360 degrees
+    setSorting({ price: null });
+    fetchResults();
+  };
+  
+  const applySorting = () => {
+    fetchResults();
+  };
+  
 
   return (
-    <StyledView className='flex-1 p-1 mt-4'>
-      {/* Search Bar */}
-      <StyledView className="absolute right-0 left-0 top-16 flex-row items-center mb-4 justify-center z-20">
-        <StyledPressable 
-            className='absolute left-2' 
-            onPress={() => {
-              textInputRef.current?.blur(); 
-              Keyboard.dismiss(); 
-              handleBlur(); 
-              setShowOverlay(false);
-              setSearchQuery('');
-
-              if(!showOverlay){
-                router.back();
-              }
-
-            }}>
-            <StyledImage
-                source={icons.carrotBlack}
-                className="w-5 h-5"
-                style={{ tintColor: '#FF5757', transform: [{ rotate: '90deg' }] }}
-            />
-        </StyledPressable>
-      <Animated.View style={[animatedStyle]} className="w-full flex-row items-center bg-white border border-darkGray rounded-full px-4 py-2">
-          <StyledImage
-            source={icons.search}
-            className="w-5 h-5 mr-2"
-          />
-          <StyledTextInput
-            value={searchQuery}
-            onChangeText={(text) => {handleChangeText(text)}}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            placeholder="Search..."
-            className="flex-1 text-sm"
-            onSubmitEditing={() => {
-              if (searchQuery.trim()) {
-                handleEnter()
-              }
-            }}
-          />
-      </Animated.View>
-    </StyledView>
-
-  {/* Search Results (Dynamic Suggestions) */}
-
-  <ScrollView
-    showsVerticalScrollIndicator = {false}
-    style={{paddingTop: 120}}
-  >
-    <StyledView className="">
-      {augmentedResults.map((item: Listing & { seller?: Seller }) => (
-        <StyledView key={item.id} className="h-40 w-full">
+    <StyledView className='flex-1'>
+      <StyledView className='flex-1 p-1 mt-4'>
+        {/* Search Bar */}
+        <StyledView className="absolute right-0 left-0 top-16 flex-row items-center mb-4 justify-center z-20">
           <StyledPressable 
-            className='flex-row h-full w-full items-center pl-4 pr-4 active:bg-lightGray' 
-            onPress={() => {router.push(`/listing/${item.id}`)}}
-          >
-            <StyledImage source={{uri: item.images[0]}} className='w-24 h-32 rounded-xl border border-0.5'/>
-            <StyledView className='ml-2 flex-1 h-full pt-4'>
-              <StyledText className='font-bold text-wrap h-10' numberOfLines={2} style={{fontSize:16}}>{item.title}</StyledText>
-              <StyledText className="text-gray mt-1 -mb-1" numberOfLines={1}>
-                  {item.bidCount} Bids | {remainingTimes[item.id] || "Calculating..."}
-              </StyledText>
-              <StyledView className='flex-row'>
-                <StyledText className='text-lg font-bold mt-1 mr-2'>${item.price}</StyledText>
-                <StyledPressable className='rounded-xl flex-row p-1 items-center'>
-                  <StyledText className='text-lg mr-2 text-gray'>|</StyledText>
-                  <StyledText className='text-lg text-black font-bold'>{item.likes}</StyledText>
-                  <StyledImage source={icons.heartEmpty} className='w-5 h-5 ml-2' style={{tintColor:'#FF5757'}}/>
+              className='absolute left-2' 
+              onPress={() => {
+                textInputRef.current?.blur(); 
+                Keyboard.dismiss(); 
+                handleBlur(); 
+                setShowOverlay(false);
+                setSearchQuery('');
+
+                if(!showOverlay){
+                  router.back();
+                }
+
+              }}>
+              <StyledImage
+                  source={icons.carrotBlack}
+                  className="w-5 h-5"
+                  style={{ tintColor: '#FF5757', transform: [{ rotate: '90deg' }] }}
+              />
+          </StyledPressable>
+          <Animated.View style={[animatedStyle]} className="w-full flex-row items-center bg-white border border-darkGray rounded-full px-4 py-2">
+            <StyledImage
+              source={icons.search}
+              className="w-5 h-5 mr-2"
+            />
+            <StyledTextInput
+              value={searchQuery}
+              onChangeText={(text) => {handleChangeText(text)}}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              placeholder="Search..."
+              className="flex-1 text-sm"
+              onSubmitEditing={() => {
+                if (searchQuery.trim()) {
+                  handleEnter()
+                }
+              }}
+            />
+        </Animated.View>
+      </StyledView>
+
+      {/* Filter Button */}
+
+      <StyledPressable 
+        className={`absolute bottom-4 right-4 p-4 flex-row bg-primary active:bg-primaryDark rounded-3xl z-${showOverlay ? '5' : '20'} items-center justify-center`}
+        onPress={() => {toggleFilterModal();}}
+      >
+      <StyledImage source={icons.filter} className='w-6 h-6'/>
+      </StyledPressable>
+
+    {/* Search Results (Dynamic Suggestions) */}
+
+    <ScrollView
+      showsVerticalScrollIndicator = {false}
+      style={{paddingTop: 108}}
+    >
+      <StyledView className=''>
+        {augmentedResults.map((item: Listing & { seller?: Seller }) => (
+          <StyledView key={item.id} className="h-40 w-full">
+            <StyledView className='w-full h-px bg-lightGray' />
+            <StyledPressable 
+              className='flex-row h-full w-full items-center pl-4 pr-4 active:bg-lightGray' 
+              onPress={() => {router.push(`/listing/${item.id}`)}}
+            >
+              <StyledImage source={{uri: item.images[0]}} className='w-24 h-32 rounded-xl border border-0.5'/>
+              <StyledView className='ml-2 flex-1 h-full pt-4'>
+                <StyledText className='font-bold text-wrap h-10' numberOfLines={2} style={{fontSize:16}}>{item.title}</StyledText>
+                {item.listingType === 'auction' ?(
+                  <StyledText className="text-gray mt-1 -mb-1" numberOfLines={1}>
+                      {item.bidCount} Bids | {remainingTimes[item.id] || "Calculating..."}
+                  </StyledText>
+                ):(
+                  <StyledText className="text-gray mt-1 -mb-1" numberOfLines={1}>
+                    {item.category}
+                  </StyledText>
+                )}
+                <StyledView className='flex-row'>
+                  <StyledText className='text-lg font-bold mt-1 mr-2'>${item.price}</StyledText>
+                  <StyledPressable className='rounded-xl flex-row p-1 items-center'>
+                    <StyledText className='text-lg mr-2 text-gray'>|</StyledText>
+                    <StyledText className='text-lg text-black font-bold'>{item.likes}</StyledText>
+                    <StyledImage source={icons.heartEmpty} className='w-5 h-5 ml-2' style={{tintColor:'#FF5757'}}/>
+                  </StyledPressable>
+                </StyledView>
+                <StyledPressable
+                      className="flex-row items-center active:bg-lightGray mt-1 rounded-xl"
+                      onPress={() => handleProfile(item.seller.id, router, profile)}
+                >
+                  <StyledImage source={{ uri: item.seller.pfp }} className="h-8 w-8 rounded-full" />
+                  <StyledView className='pl-2'>
+                    <StyledText className="font-bold">{item.seller.username}</StyledText>
+                    <StyledView className="flex-row items-center">
+                      <StyledText className="text-gray" style={{ fontSize: 12 }}>
+                        {item.seller.rating}
+                      </StyledText>
+                      <StyledImage
+                        source={icons.starFull}
+                        className="w-3 h-3 ml-1 mr-1"
+                        style={{ tintColor: '#FF5757' }}
+                      />
+                      <StyledText className="text-gray" style={{ fontSize: 12 }}>
+                        | {item.seller.numberOfFollowers} Followers
+                      </StyledText>
+                    </StyledView>
+                  </StyledView>
                 </StyledPressable>
               </StyledView>
-              <StyledPressable
-                    className="flex-row items-center active:bg-lightGray mt-1 rounded-xl"
-                    onPress={() => handleProfile(item.seller.id, router, profile)}
-              >
-                <StyledImage source={{ uri: item.seller.pfp }} className="h-8 w-8 rounded-full" />
-                <StyledView className='pl-2'>
-                  <StyledText className="font-bold">{item.seller.username}</StyledText>
-                  <StyledView className="flex-row items-center">
-                    <StyledText className="text-gray" style={{ fontSize: 12 }}>
-                      {item.seller.rating}
-                    </StyledText>
-                    <StyledImage
-                      source={icons.starFull}
-                      className="w-3 h-3 ml-1 mr-1"
-                      style={{ tintColor: '#FF5757' }}
-                    />
-                    <StyledText className="text-gray" style={{ fontSize: 12 }}>
-                      | {item.seller.numberOfFollowers} Followers
-                    </StyledText>
-                  </StyledView>
-                </StyledView>
-              </StyledPressable>
-            </StyledView>
-          </StyledPressable>
-          <StyledView className='w-full h-px bg-lightGray' />
-        </StyledView>
-      ))}
-    </StyledView>
-  </ScrollView>
+            </StyledPressable>
+          </StyledView>
+        ))}
+      </StyledView>
+    </ScrollView>
 
-  {showOverlay && (
-    <StyledView className="absolute top-0 bottom-0 left-0 right-0 bg-white z-10 pt-4">
-      <ScrollView contentContainerStyle={{ paddingTop: 16}}>
-        {searchQuery.length === 0 ? (
-          <>
-            <StyledText className='text-lg font-bold mb-4 mt-20 pl-4'>Recent</StyledText>
-            {(profile?.recentSearches || []).map((item, index) => (
-              <StyledView key={index} className="w-full">
-                {item.type === 'searchTerm' ? (
-                  // Render search term
-                  <StyledPressable
-                    className="flex-row items-center pl-4 pr-4"
-                    onPress={() => handleSuggestionPress(item.term)}
+    {showOverlay && (
+      <StyledView className="absolute top-0 bottom-0 left-0 right-0 bg-white z-10 pt-4">
+        <ScrollView contentContainerStyle={{ paddingTop: 16}}>
+          {searchQuery.length === 0 ? (
+            <>
+              <StyledText className='text-lg font-bold mb-4 mt-20 pl-4'>Recent</StyledText>
+              {(profile?.recentSearches || []).map((item, index) => (
+                <StyledView key={index} className="w-full">
+                  {item.type === 'searchTerm' ? (
+                    // Render search term
+                    <StyledPressable
+                      className="flex-row items-center pl-4 pr-4"
+                      onPress={() => handleSuggestionPress(item.term)}
+                    >
+                      <StyledImage source={icons.search} className="h-5 w-5" />
+                      <StyledText className="p-4 font-bold">{item.term}</StyledText>
+                    </StyledPressable>
+                  ) : (
+                    // Render seller profile
+                    <StyledPressable
+                      className="flex-row items-center pl-4 pr-4 active:bg-lightGray"
+                      onPress={() => handleUserSuggestionPress(item.seller)}
+                    >
+                      <StyledImage source={{ uri: item.seller.pfp }} className="h-10 w-10 rounded-full" />
+                      <StyledView className="p-4">
+                        <StyledText className="font-bold">{item.seller.username}</StyledText>
+                        <StyledView className="flex-row items-center">
+                          <StyledText className="text-gray" style={{ fontSize: 12 }}>
+                            {item.seller.rating}
+                          </StyledText>
+                          <StyledImage
+                            source={icons.starFull}
+                            className="w-3 h-3 ml-1 mr-1"
+                            style={{ tintColor: '#FF5757' }}
+                          />
+                          <StyledText className="text-gray" style={{ fontSize: 12 }}>
+                            | {item.seller.numberOfFollowers} Followers
+                          </StyledText>
+                        </StyledView>
+                      </StyledView>
+                    </StyledPressable>
+                  )}
+                  <StyledView className="w-full h-px bg-lightGray" />
+                </StyledView>
+              ))}
+            </>
+          ):(
+            <>
+              <StyledView className='mt-20'></StyledView>
+              {listingSuggestions.map((item,index)=> (
+                <StyledView key={index} className='w-full'>
+                  <StyledPressable 
+                    className='flex-row items-center pl-4 pr-4' 
+                    onPress={() => {handleSuggestionPress(item)}}
                   >
-                    <StyledImage source={icons.search} className="h-5 w-5" />
-                    <StyledText className="p-4 font-bold">{item.term}</StyledText>
+                    <StyledImage source={icons.search} className='h-5 w-5' />
+                    <StyledText className='p-4 font-bold'>{item}</StyledText>
                   </StyledPressable>
-                ) : (
-                  // Render seller profile
-                  <StyledPressable
-                    className="flex-row items-center pl-4 pr-4 active:bg-lightGray"
-                    onPress={() => handleUserSuggestionPress(item.seller)}
+                  <StyledView className='w-full h-px bg-lightGray' />
+                </StyledView>
+              ))}
+              {userSuggestions.map((item,index)=> (
+                <StyledView key={index} className='w-full'>
+                  <StyledPressable 
+                    className='flex-row items-center pl-4 pr-4 active:bg-lightGray' 
+                    onPress={() => {handleUserSuggestionPress(item)}}
                   >
-                    <StyledImage source={{ uri: item.seller.pfp }} className="h-10 w-10 rounded-full" />
-                    <StyledView className="p-4">
-                      <StyledText className="font-bold">{item.seller.username}</StyledText>
-                      <StyledView className="flex-row items-center">
-                        <StyledText className="text-gray" style={{ fontSize: 12 }}>
-                          {item.seller.rating}
-                        </StyledText>
-                        <StyledImage
-                          source={icons.starFull}
-                          className="w-3 h-3 ml-1 mr-1"
-                          style={{ tintColor: '#FF5757' }}
-                        />
-                        <StyledText className="text-gray" style={{ fontSize: 12 }}>
-                          | {item.seller.numberOfFollowers} Followers
-                        </StyledText>
+                    <StyledImage source={{uri: item.pfp}} className='h-10 w-10 rounded-full' />
+                    <StyledView className='p-4'>
+                      <StyledText className='font-bold'>{item.username}</StyledText>
+                      <StyledView className='flex-row items-center'>
+                        <StyledText className='text-gray' style={{fontSize: 12}}>{item.rating}</StyledText>
+                        <StyledImage source={icons.starFull} className='w-3 h-3 ml-1 mr-1' style={{tintColor:'#FF5757'}}/>
+                        <StyledText className='text-gray' style={{fontSize: 12}}>| {item.numberOfFollowers} Followers</StyledText>
                       </StyledView>
                     </StyledView>
                   </StyledPressable>
-                )}
-                <StyledView className="w-full h-px bg-lightGray" />
-              </StyledView>
-            ))}
-          </>
-        ):(
-          <>
-            <StyledView className='mt-20'></StyledView>
-            {listingSuggestions.map((item,index)=> (
-              <StyledView key={index} className='w-full'>
-                <StyledPressable 
-                  className='flex-row items-center pl-4 pr-4' 
-                  onPress={() => {handleSuggestionPress(item)}}
-                >
-                  <StyledImage source={icons.search} className='h-5 w-5' />
-                  <StyledText className='p-4 font-bold'>{item}</StyledText>
-                </StyledPressable>
-                <StyledView className='w-full h-px bg-lightGray' />
-              </StyledView>
-            ))}
-            {userSuggestions.map((item,index)=> (
-              <StyledView key={index} className='w-full'>
-                <StyledPressable 
-                  className='flex-row items-center pl-4 pr-4 active:bg-lightGray' 
-                  onPress={() => {handleUserSuggestionPress(item)}}
-                >
-                  <StyledImage source={{uri: item.pfp}} className='h-10 w-10 rounded-full' />
-                  <StyledView className='p-4'>
-                    <StyledText className='font-bold'>{item.username}</StyledText>
-                    <StyledView className='flex-row items-center'>
-                      <StyledText className='text-gray' style={{fontSize: 12}}>{item.rating}</StyledText>
-                      <StyledImage source={icons.starFull} className='w-3 h-3 ml-1 mr-1' style={{tintColor:'#FF5757'}}/>
-                      <StyledText className='text-gray' style={{fontSize: 12}}>| {item.numberOfFollowers} Followers</StyledText>
-                    </StyledView>
-                  </StyledView>
-                </StyledPressable>
-                <StyledView className='w-full h-px bg-lightGray' />
-              </StyledView>
-            ))}
-          </>
-        )}
-      </ScrollView>
+                  <StyledView className='w-full h-px bg-lightGray' />
+                </StyledView>
+              ))}
+            </>
+          )}
+        </ScrollView>
+      </StyledView>
+    )}
     </StyledView>
-  )}
+
+    {/* Filter Modal */}
+    <Modal
+      isVisible={filterModalVisible}
+      onBackdropPress={toggleFilterModal}
+      swipeDirection="down"
+      onSwipeComplete={toggleFilterModal}
+      backdropOpacity={0.25}
+      style={{
+        justifyContent: 'flex-end',
+        margin: 0,
+        marginTop: 108,
+      }}
+    >
+      <StyledView className="bg-white h-96 w-full rounded-2xl pt-2">
+        <Animated.View
+          style={[
+            animatedModalStyle,
+            {
+              flexDirection: 'row',
+              width: screenWidth * 2, // Two pages
+            },
+          ]}
+        >
+          {/* First Page */}
+          <StyledView className="w-1/2">
+            <StyledView className="flex-row items-center justify-center w-full">
+              <StyledPressable
+                className="absolute left-4 active:bg-lightGray rounded-full h-8 w-8 items-center justify-center"
+                onPress={toggleFilterModal}
+              >
+                <StyledImage source={icons.x} className="w-5 h-5" />
+              </StyledPressable>
+              <StyledText className="font-bold text-xl p-2">Filter</StyledText>
+              <StyledPressable
+                className="absolute right-4 rounded-full h-8 w-8 items-center justify-center"
+                onPress={handleReset}
+              >
+                <Animated.View style={resetAnimatedStyle}>
+                  <StyledImage
+                    source={icons.reset}
+                    style={{ tintColor: '#FF5757' }}
+                    className="w-6 h-6"
+                  />
+                </Animated.View>
+              </StyledPressable>
+            </StyledView>
+            <StyledView className="w-full h-px bg-lightGray" />
+
+            {/* Sort Options */}
+            <StyledView className='pt-2 pl-4 pr-4'>
+              <StyledPressable
+                className=""
+                onPress={navigateToSecondPage}
+              >
+                <StyledView className='flex-row justify-between items-center'>
+                  <StyledText className='font-bold text-lg'>Sort</StyledText>
+                  <StyledView className='flex-row items-center'>
+                    <StyledText className='text-gray'>
+                      {sorting.price}
+                    </StyledText>
+                    <StyledImage className='ml-2 w-4 h-4' source={icons.carrotBlack} style={{opacity: 75, transform:[{rotate:'-90deg'}]}}/>
+                  </StyledView>
+                </StyledView>
+                <StyledView className="w-full h-px bg-lightGray mt-2" />
+              </StyledPressable> 
+              {/* Apply Button */}
+              <StyledPressable
+                className="mt-6 bg-primary py-3 rounded-lg items-center justify-center"
+                onPress={() => {
+                  applySorting();
+                  toggleFilterModal();
+                }}
+              >
+                <StyledText className="text-white font-bold">Apply</StyledText>
+              </StyledPressable>
+            </StyledView>   
+          </StyledView>
+
+          {/* Second Page */}
+          <StyledView className="w-1/2">
+            <StyledView className="flex-row items-center justify-center w-full">
+              <StyledPressable
+                className="absolute left-4 active:bg-lightGray rounded-full h-8 w-8 items-center justify-center"
+                onPress={navigateToFirstPage}
+              >
+                <StyledImage source={icons.carrotBlack} className="w-5 h-5" />
+              </StyledPressable>
+              <StyledText className="font-bold text-xl p-2">Sort Options</StyledText>
+            </StyledView>
+            <StyledView className="w-full h-px bg-lightGray" />
+
+            {/* Sorting Options */}
+            <StyledView className="mt-4">
+              <StyledText className="font-bold text-lg mb-2">Sort by Price</StyledText>
+              <StyledView className="flex-row space-x-2">
+                <StyledPressable
+                  className={`rounded-lg px-4 py-2 ${
+                    sorting.price === 'asc' ? 'bg-primary text-white' : 'bg-gray-200'
+                  }`}
+                  onPress={() => setSorting({ ...sorting, price: 'asc' })}
+                >
+                  <StyledText>Low to High</StyledText>
+                </StyledPressable>
+                <StyledPressable
+                  className={`rounded-lg px-4 py-2 ${
+                    sorting.price === 'desc' ? 'bg-primary text-white' : 'bg-gray-200'
+                  }`}
+                  onPress={() => setSorting({ ...sorting, price: 'desc' })}
+                >
+                  <StyledText>High to Low</StyledText>
+                </StyledPressable>
+              </StyledView>
+              {/* Apply Button */}
+              <StyledPressable
+                className="mt-6 bg-primary py-3 rounded-lg items-center justify-center"
+                onPress={() => {
+                  applySorting();
+                  toggleFilterModal();
+                }}
+              >
+                <StyledText className="text-white font-bold">Apply</StyledText>
+              </StyledPressable>
+            </StyledView>
+          </StyledView>
+        </Animated.View>
+      </StyledView>
+    </Modal>
+
   </StyledView>
   );
 };
+
 
 export default ResultsPage;

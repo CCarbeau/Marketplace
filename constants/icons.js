@@ -38,6 +38,9 @@ import promo from '..//assets/icons/promo.png'
 import plus from '..//assets/icons/+.png'
 import recent from '..//assets/icons/recent.png'
 import starFull from '..//assets/icons/starFull.png'
+import filter from '..//assets/icons/filter.png'
+import reset from '..//assets/icons/reset.png'
+
 
 
 export default {
@@ -81,4 +84,6 @@ export default {
   plus,
   recent,
   starFull,
+  filter,
+  reset,
 };
