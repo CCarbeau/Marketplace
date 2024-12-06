@@ -14,6 +14,9 @@ import BrandModal from './brand';
 import FeaturesModal from './features';
 import ShippingModal from './shipping';
 import UploadingModal from './uploading';
+import GradeModal from './grade';
+import GraderModal from './grader';
+import QualityModal from './quality';
 
 const StyledPressable = styled(Pressable)
 const StyledImage = styled(Image)
@@ -25,12 +28,17 @@ const StyledTextInput = styled(TextInput)
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
+type Grader = 'PSA' | 'BGS' | 'SGC' | 'Arena Club' | 'CGC' | 'CSG' | 'HGA' | 'KSA' | 'Rare Edition' | 'TAG' | 'Other' | '';
+
 const { width: screenWidth } = Dimensions.get('window');
 
 const CreateListing = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [imageIndex, setImageIndex]= useState(0);
+  const [graderModalVisible, setGraderModalVisible] = useState(false);
+  const [gradeModalVisible, setGradeModalVisible] = useState(false);
+  const [qualityModalVisible, setQualityModalVisible] = useState(false);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [brandModalVisible, setBrandModalVisible] = useState(false);
   const [featuresModalVisible, setFeaturesModalVisible] = useState(false);
@@ -40,6 +48,10 @@ const CreateListing = () => {
   const router = useRouter();
   const delay = (ms: any) => new Promise(resolve => setTimeout(resolve, ms));
   
+  const [condition, setCondition] = useState('');
+  const [grader, setGrader] = useState('');
+  const [grade, setGrade] = useState('');
+  const [quality, setQuality] = useState('');
   const [category, setCategory] = useState('');
   const [genre, setGenre] = useState('')
   const [title, setTitle] = useState('');
@@ -149,6 +161,34 @@ const CreateListing = () => {
       return;
     }
 
+    if(condition === ''){
+      Alert.alert("A condition is required");
+      return;
+    }
+
+    if(condition === 'graded'){
+      if(grader === ''){
+        Alert.alert("A grader is required");
+        return;
+      }
+      if(grade === ''){
+        Alert.alert("A grade is required");
+        return;
+      }
+    }
+
+    if(condition === 'ungraded'){
+      if(quality === ''){
+        Alert.alert("A quality is required");
+        return;
+      }
+    }
+
+    if(condition === ''){
+      Alert.alert("A condition is required");
+      return;
+    }
+
     if (category === ''){
       Alert.alert("A category is required");
       return;
@@ -251,9 +291,13 @@ const CreateListing = () => {
         title,
         description,
         price,
+        condition,
+        ...(condition === 'graded' && grader ? { grader } : {}),
+        ...(condition === 'graded' && grade ? { grade } : {}),
+        ...(condition === 'ungraded' && quality ? { quality } : {}),
         quantity,
         category,
-        
+
         // Condition for 'Singles' in 'Sports Cards'
         ...(category.slice(-7) === 'Singles' && genre === 'Sports Cards' ? {
           ...includeIfDefined('athlete', athlete),
@@ -370,6 +414,19 @@ const CreateListing = () => {
     }
   };  
 
+  const handleGraderSelect = (selectedGrader: string) => {
+    setGrader(selectedGrader); 
+    setGrade('');
+  };
+
+  const handleGradeSelect = (selectedGrade: string) => {
+    setGrade(selectedGrade); 
+  };
+
+  const handleQualitySelect = (selectedQuality: string) => {
+    setQuality(selectedQuality); 
+  };
+
   const handleCategorySelect = (selectedCategory: string, selectedGenre: string) => {
     setCategory(selectedCategory); // Update the main component's state
     setGenre(selectedGenre);
@@ -459,9 +516,76 @@ const CreateListing = () => {
           <StyledView className='bg-gray mt-4 w-full h-px'/>
           <StyledView className='flex pl-4 pr-4 mt-4 w-full'>
             <StyledText className='text-xl font-bold text-black'>Details</StyledText>
-            <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-              <StyledText className='text-lg'>Category: </StyledText>
-              <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray justify-center h-8' onPress={() => {setCategoryModalVisible(true);}}>
+            <StyledView className="flex-row justify-between items-center">
+                <StyledText className="text-lg w-24 text-right mr-4">
+                  Condition:
+                </StyledText>
+                <StyledView className="flex-1 flex-row justify-between gap-x-2">
+                  <StyledPressable
+                    className={`flex-1 rounded-lg border-2 h-8 items-center justify-center active:opacity-50 ${condition === 'graded' && ('bg-primary border-primary')}`}
+                    onPress={() => {
+                      setCondition('graded');
+                    }}
+                  >
+                    <StyledText className={`font-bold ${condition === 'graded' && ('text-white')}`}>
+                      Graded
+                    </StyledText>
+                  </StyledPressable>
+                  <StyledPressable
+                    className={`flex-1 rounded-lg border-2 h-8 items-center justify-center active:opacity-50 ${condition === 'ungraded' && ('bg-primary border-primary')}`}
+                    onPress={() => {
+                      setCondition('ungraded');
+                    }}
+                  >
+                    <StyledText className={`font-bold ${condition === 'ungraded' && ('text-white')}`}>
+                      Ungraded
+                    </StyledText>
+                  </StyledPressable>
+                </StyledView>
+              </StyledView>
+              {condition === 'graded' ? (
+                <>
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Grader:</StyledText>
+                    <StyledPressable className='flex-1 border-2 border-gray rounded-lg active:opacity-50 justify-center h-8' onPress={() => {setGraderModalVisible(true);}}>
+                      {grader==='' ? (
+                        <StyledText className='text text-gray text-center font-bold'>Select Grader</StyledText>
+                      ):(
+                        <StyledText className='text-primary text-center font-bold shadow-sm'>{grader}</StyledText>
+                      )}
+                    </StyledPressable>
+                  </StyledView>
+
+                  {grader !== '' && (
+                    <StyledView className='flex-row mt-2 justify-between items-center'>
+                      <StyledText className='text-right w-24 mr-4'>Grade:</StyledText>
+                      <StyledPressable className='flex-1 border-2 border-gray rounded-lg active:opacity-50 justify-center h-8' onPress={() => {setGradeModalVisible(true);}}>
+                        {grade==='' ? (
+                          <StyledText className='text text-gray text-center font-bold'>Select Grade</StyledText>
+                        ):(
+                          <StyledText className='text-primary text-center font-bold shadow-sm'>{grade}</StyledText>
+                        )}
+                      </StyledPressable>
+                    </StyledView>
+                  )}
+                </>
+              ) : condition === 'ungraded' ? (
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Quality:</StyledText>
+                  <StyledPressable className='flex-1 border-2 border-gray rounded-lg active:opacity-50 justify-center h-8' onPress={() => {setQualityModalVisible(true);}}>
+                    {quality==='' ? (
+                      <StyledText className='text text-gray text-center font-bold'>Select Quality</StyledText>
+                    ):(
+                      <StyledText className='text-primary text-center font-bold shadow-sm'>{quality}</StyledText>
+                    )}
+                  </StyledPressable>
+                </StyledView>
+              ) : (
+                <></>
+              )}
+            <StyledView className='flex-row mt-2 justify-between'>
+              <StyledText className='text-lg w-24 text-right mr-4'>Category:</StyledText>
+              <StyledPressable className='flex-1 border-2 border-gray rounded-lg active:opacity-50 justify-center h-8' onPress={() => {setCategoryModalVisible(true);}}>
                 {category==='' ? (
                   <StyledText className='text text-gray text-center font-bold'>Select Category</StyledText>
                 ):(
@@ -472,9 +596,9 @@ const CreateListing = () => {
 
             {category.slice(-7)==='Singles' && genre==='Sports Cards' && (
               <>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Athlete: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Athlete:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
                       className='text-primary font-bold text-center shadow-sm' 
                       placeholder='Athlete Name'
@@ -484,9 +608,9 @@ const CreateListing = () => {
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Team: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Team:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
                       className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Team Name'
@@ -496,11 +620,11 @@ const CreateListing = () => {
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Year: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Year'
                       placeholderTextColor='gray'
                       value={year} 
@@ -509,21 +633,26 @@ const CreateListing = () => {
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Brand: </StyledText>
-                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray justify-center h-8' onPress={() => {setBrandModalVisible(true);}}>
-                    {brand==='' ? (
-                      <StyledText className='text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
-                    ):(
-                      <StyledText className='text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
+
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Brand:</StyledText>
+                  <StyledPressable 
+                    className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
+                    onPress={() => setBrandModalVisible(true)}
+                  >
+                    {brand === '' ? (
+                      <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
+                    ) : (
+                      <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
                     )}
                   </StyledPressable>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Set: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Set:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Set Name'
                       placeholderTextColor='gray'
                       value={set} 
@@ -531,21 +660,26 @@ const CreateListing = () => {
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Features: </StyledText>
-                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray justify-center h-8' onPress={() => {setFeaturesModalVisible(true);}}>
-                    {features.length===0 ? (
-                      <StyledText className='text-gray text-center font-bold shadow-sm'>Select Features</StyledText>
-                    ):(
-                      <StyledText className='text-primary text-center font-bold shadow-sm'>{features.join(', ')}</StyledText>
+
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Features:</StyledText>
+                  <StyledPressable 
+                    className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
+                    onPress={() => setFeaturesModalVisible(true)}
+                  >
+                    {features.length === 0 ? (
+                      <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Features</StyledText>
+                    ) : (
+                      <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{features.join(', ')}</StyledText>
                     )}
                   </StyledPressable>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Parallel: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Parallel:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Parallel Name'
                       placeholderTextColor='gray'
                       value={parallel} 
@@ -553,11 +687,12 @@ const CreateListing = () => {
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Print Run: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Print Run:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Print Run'
                       placeholderTextColor='gray'
                       value={printRun} 
@@ -571,36 +706,38 @@ const CreateListing = () => {
 
             {category.slice(-3)==='Lot' && genre==='Sports Cards' && (
               <>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Cards in Lot: </StyledText>
-                  <StyledView className='flex-row items-center border-2 border-gray rounded-xl h-8'>
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Cards in Lot:</StyledText>
+                  <StyledView className='flex-row items-center border-2 border-gray rounded-lg h-8'>
                     <StyledTextInput 
                       className='text-center w-12 font-bold shadow-sm text-primary'
-                      style={{fontSize: 16}}
+                      style={{ fontSize: 16 }}
                       value={cardsInLot} 
                       onChangeText={(text) => setCardsInLot(text)} 
                       keyboardType="numeric" 
                     />
-                    <StyledText className='text-lg mr-2 text-gray'>Cards</StyledText>
+                    <StyledText className='text-md text-gray pr-2'>Cards</StyledText>
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Atheletes: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+              
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Athletes:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Athelete Names'
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                      placeholder='Athlete Names'
                       placeholderTextColor='gray'
                       value={athlete} 
                       onChangeText={(text) => setAthlete(text)}
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Teams: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+              
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Teams:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Team Names'
                       placeholderTextColor='gray'
                       value={team} 
@@ -608,11 +745,12 @@ const CreateListing = () => {
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Year: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+              
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Year'
                       placeholderTextColor='gray'
                       value={year} 
@@ -621,21 +759,26 @@ const CreateListing = () => {
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Brand: </StyledText>
-                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray justify-center h-8' onPress={() => {setBrandModalVisible(true);}}>
-                    {brand==='' ? (
-                      <StyledText className='text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
-                    ):(
-                      <StyledText className='text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
+              
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Brand:</StyledText>
+                  <StyledPressable 
+                    className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
+                    onPress={() => setBrandModalVisible(true)}
+                  >
+                    {brand === '' ? (
+                      <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
+                    ) : (
+                      <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
                     )}
                   </StyledPressable>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Set: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+              
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Set:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Set Name'
                       placeholderTextColor='gray'
                       value={set} 
@@ -643,36 +786,44 @@ const CreateListing = () => {
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Features: </StyledText>
-                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray justify-center h-8' onPress={() => {setFeaturesModalVisible(true);}}>
-                    {features.length===0 ? (
-                      <StyledText className='text-gray text-center font-bold shadow-sm'>Select Features</StyledText>
-                    ):(
-                      <StyledText className='text-primary text-center font-bold shadow-sm'>{features}</StyledText>
+              
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Features:</StyledText>
+                  <StyledPressable 
+                    className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
+                    onPress={() => setFeaturesModalVisible(true)}
+                  >
+                    {features.length === 0 ? (
+                      <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Features</StyledText>
+                    ) : (
+                      <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{features.join(', ')}</StyledText>
                     )}
                   </StyledPressable>
                 </StyledView>
-              </>
+              </>            
             )}
 
             {category.slice(-3)==='Wax' && genre==='Sports Cards' && (
               <>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Brand: </StyledText>
-                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray justify-center h-8' onPress={() => {setBrandModalVisible(true);}}>
-                    {brand==='' ? (
-                      <StyledText className='text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
-                    ):(
-                      <StyledText className='text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Brand:</StyledText>
+                  <StyledPressable 
+                    className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
+                    onPress={() => setBrandModalVisible(true)}
+                  >
+                    {brand === '' ? (
+                      <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
+                    ) : (
+                      <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
                     )}
                   </StyledPressable>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Set: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+              
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Set:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Set Name'
                       placeholderTextColor='gray'
                       value={set} 
@@ -680,11 +831,12 @@ const CreateListing = () => {
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Year: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+              
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Year'
                       placeholderTextColor='gray'
                       value={year} 
@@ -698,23 +850,24 @@ const CreateListing = () => {
 
             {category.slice(-5)==='Break' && genre==='Sports Cards' && (
               <>
-                <StyledView className='flex-row gap-x-3 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Athelete(s): </StyledText>
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Athlete(s):</StyledText>
                   <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Athelete Names'
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                      placeholder='Athlete Names'
                       placeholderTextColor='gray'
                       value={athlete} 
                       onChangeText={(text) => setAthlete(text)}
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Team(s): </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+              
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Team(s):</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Team Names'
                       placeholderTextColor='gray'
                       value={team} 
@@ -722,21 +875,26 @@ const CreateListing = () => {
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Brand: </StyledText>
-                  <StyledPressable className='border-2 border-gray rounded-lg w-2/3 active:bg-gray justify-center h-8' onPress={() => {setBrandModalVisible(true);}}>
-                    {brand==='' ? (
-                      <StyledText className='text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
-                    ):(
-                      <StyledText className='text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
+              
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Brand:</StyledText>
+                  <StyledPressable 
+                    className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
+                    onPress={() => setBrandModalVisible(true)}
+                  >
+                    {brand === '' ? (
+                      <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
+                    ) : (
+                      <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
                     )}
                   </StyledPressable>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Set: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+              
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Set:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Set Name'
                       placeholderTextColor='gray'
                       value={set} 
@@ -744,11 +902,12 @@ const CreateListing = () => {
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Year: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+              
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Year'
                       placeholderTextColor='gray'
                       value={year} 
@@ -762,11 +921,11 @@ const CreateListing = () => {
 
             {genre === 'Sports Memorabilia' && (
               <>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Athlete: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Athlete:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Athlete Name'
                       placeholderTextColor='gray'
                       value={athlete} 
@@ -774,11 +933,12 @@ const CreateListing = () => {
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Team: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+              
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Team:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Team Name'
                       placeholderTextColor='gray'
                       value={team} 
@@ -786,11 +946,12 @@ const CreateListing = () => {
                     />
                   </StyledView>
                 </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className='text-lg'>Year: </StyledText>
-                  <StyledView className='border-2 border-gray rounded-lg w-2/3 h-8 justify-center'>
+              
+                <StyledView className='flex-row mt-2 justify-between items-center'>
+                  <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
+                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
                     <StyledTextInput 
-                      className='text-primary text-center font-bold justify-center shadow-sm' 
+                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
                       placeholder='Year'
                       placeholderTextColor='gray'
                       value={year} 
@@ -803,14 +964,18 @@ const CreateListing = () => {
             )}
 
           </StyledView>
+
+
           <StyledView className='bg-gray mt-4 w-full h-px'/>
+
+
           <StyledView className='flex pl-4 pr-4 mt-4 w-full'>
             <StyledText className='text-xl font-bold text-black'>Pricing</StyledText>
             <StyledView className='flex-row gap-x-4 mt-2 justify-between'>      
-                <StyledPressable className={`${listingType==='auction' && 'bg-primary'} flex-1 border-2 border-black rounded-2xl active:bg-gray`} onPress={() => setListingType('auction')}>
+                <StyledPressable className={`${listingType==='auction' && 'bg-primary border-primary'} flex-1 border-2 rounded-2xl active:bg-gray`} onPress={() => setListingType('auction')}>
                   <StyledText className={`${listingType==='auction' && 'text-white'} font-bold text-center p-2`}>Auction</StyledText>
                 </StyledPressable>
-                <StyledPressable className={`${listingType==='fixed' && 'bg-primary'} flex-1 border-2 border-black rounded-2xl active:bg-gray`} onPress={() => setListingType('fixed')}>
+                <StyledPressable className={`${listingType==='fixed' && 'bg-primary border-primary'} flex-1 border-2 rounded-2xl active:bg-gray`} onPress={() => setListingType('fixed')}>
                   <StyledText className={`${listingType==='fixed' && 'text-white'} font-bold text-center p-2`}>Buy Now</StyledText>
                 </StyledPressable>
             </StyledView>
@@ -899,10 +1064,10 @@ const CreateListing = () => {
           <StyledView className='flex pl-4 pr-4 mt-4 w-full'>
             <StyledText className='text-xl font-bold text-black'>Shipping</StyledText>
             <StyledView className='flex-row gap-x-4 mt-2 justify-between'>      
-                <StyledPressable className={`${shippingType==='variable' && 'bg-primary'} flex-1 border-2 border-black rounded-2xl active:bg-gray`} onPress={() => setShippingType('variable')}>
+                <StyledPressable className={`${shippingType==='variable' && 'bg-primary border-primary'} flex-1 border-2 rounded-2xl active:bg-gray`} onPress={() => setShippingType('variable')}>
                   <StyledText className={`${shippingType==='variable' && 'text-white'}  font-bold text-center p-2`}>Variable</StyledText>
                 </StyledPressable>
-                <StyledPressable className={`${shippingType==='fixed' && 'bg-primary'} flex-1 border-2 border-black rounded-2xl active:bg-gray`} onPress={() => setShippingType('fixed')}>
+                <StyledPressable className={`${shippingType==='fixed' && 'bg-primary border-primary'} flex-1 border-2 rounded-2xl active:bg-gray`} onPress={() => setShippingType('fixed')}>
                   <StyledText className={`${shippingType==='fixed' && 'text-white'} font-bold text-center p-2`}>Fixed Rate</StyledText>
                 </StyledPressable>
             </StyledView>
@@ -973,7 +1138,7 @@ const CreateListing = () => {
                   left: 0,
                   top: 0,
                   bottom: 0,
-                  backgroundColor: '#00FF00', // Green color
+                  backgroundColor: '#22FF22', // Green color
                   width: animatedWidth, // Animate the width
                 }}
               />
@@ -982,7 +1147,27 @@ const CreateListing = () => {
           </StyledView>
           <StyledView className='w-full h-24'/>
 
-          <CategoryModal visible={categoryModalVisible}
+          <GraderModal
+            visible={graderModalVisible}
+            onClose={() => {setGraderModalVisible(false);}}
+            onSelectGrader={(grader: string) => handleGraderSelect(grader)}
+          />
+
+          <GradeModal
+            visible={gradeModalVisible}
+            grader={grader}
+            onClose={() => {setGradeModalVisible(false);}}
+            onSelectGrade={(grade: string) => handleGradeSelect(grade)}
+          />
+
+          <QualityModal
+            visible={qualityModalVisible}
+            onClose={() => {setQualityModalVisible(false);}}
+            onSelectQuality={(quality: string) => handleQualitySelect(quality)}
+          />
+
+          <CategoryModal 
+            visible={categoryModalVisible}
             onClose={() => {setCategoryModalVisible(false);}}
             onSelectCategory={(category: string, selectedGenre: string) => handleCategorySelect(category, selectedGenre)}
           />

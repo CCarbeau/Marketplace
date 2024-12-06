@@ -55,6 +55,7 @@ const ResultsPage = () => {
   }, [query]);
 
   const [sorting, setSorting] = useState<{ price: 'asc' | 'desc' | null, likes: 'asc' | 'desc' | null, bids: 'asc' | 'desc' | null, time: 'asc' | 'desc' | null}>({ price: null, likes: null, bids: null, time: null });
+  const [filter, setFilter] = useState<{ listingType: 'fixed' | 'auction' | null, category: string | null, sold: true | false | null, condition: 'graded' | 'ungraded' | null}>({ listingType: null, category: null, sold: null, condition: null });
 
   const fetchResults = async () => {
     try {
@@ -638,7 +639,7 @@ const ResultsPage = () => {
             <StyledView className="w-full h-px bg-lightGray" />
 
             {/* Sort Options */}
-            <StyledView className='pl-4 pr-4'>
+            <StyledView className='pl-4 pr-4 gap-y-4'>
               <StyledPressable
                 className="active:opacity-50 pt-2"
                 onPress={navigateToSecondPage}
@@ -671,7 +672,40 @@ const ResultsPage = () => {
                   </StyledView>
                 </StyledView>
                 <StyledView className="w-full h-px bg-lightGray mt-2" />
-              </StyledPressable> 
+              </StyledPressable>
+
+              {/* Filters */}
+              <StyledView className="flex-row justify-between items-center">
+                <StyledText className="font-bold text-darkGray w-28" style={{ fontSize: 16 }}>
+                  Listing Type:
+                </StyledText>
+                <StyledView className="flex-row space-x-2">
+                  <StyledPressable
+                    className={`rounded-lg px-4 border-2 active:opacity-50 ${
+                      sorting.price === 'desc' ? 'bg-primary border-primary' : ''
+                    }`}
+                    onPress={() => {
+                      clearSort('price', sorting.price === 'desc' ? null : 'desc'); // Toggle "High to Low"
+                    }}
+                  >
+                    <StyledText className={`pt-2 pb-2 font-bold ${sorting.price === 'desc' && 'text-white'}`}>
+                      Fixed
+                    </StyledText>
+                  </StyledPressable>
+                  <StyledPressable
+                    className={`rounded-lg px-4 border-2 active:opacity-50 ${
+                      sorting.price === 'asc' ? 'bg-primary border-primary' : ''
+                    }`}
+                    onPress={() => {
+                      clearSort('price', sorting.price === 'asc' ? null : 'asc'); // Toggle "Low to High"
+                    }}
+                  >
+                    <StyledText className={`pt-2 pb-2 font-bold ${sorting.price === 'asc' && 'text-white'}`}>
+                      Auction
+                    </StyledText>
+                  </StyledPressable>
+                </StyledView>
+              </StyledView>
 
               {/* Apply Button */}
               <StyledPressable
