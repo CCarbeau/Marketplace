@@ -89,7 +89,7 @@ const UploadingModal: React.FC<UploadingModalProps> = ({ visible, progress, list
                 <StyledPressable
                 className='border border-black mt-2 rounded-2xl active:bg-gray'
                 onPress={() => {
-                    router.push('/(tabs)/sell/createListing');
+                    router.replace('/(tabs)/sell/createListing');
                     onClose(); // Close the modal when navigating
                 }}
                 >
@@ -98,7 +98,7 @@ const UploadingModal: React.FC<UploadingModalProps> = ({ visible, progress, list
                 <StyledPressable
                 className='border border-black mt-2 rounded-2xl bg-primary active:bg-primaryDark'
                 onPress={() => {
-                router.push(listingUrl);
+                router.replace(listingUrl);
                 onClose(); // Close the modal when navigating
                 }}
             >

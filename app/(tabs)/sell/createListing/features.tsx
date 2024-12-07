@@ -16,11 +16,12 @@ interface FeaturesModalProps{
     visible: boolean; 
     onClose: () => void; 
     onSelectFeatures: (features: string[]) => void;
+    selectedFeatures: string[];
 }
 
-const FeaturesModal: React.FC<FeaturesModalProps> = ({ visible, onClose, onSelectFeatures }) => {
+const FeaturesModal: React.FC<FeaturesModalProps> = ({ visible, onClose, onSelectFeatures, selectedFeatures }) => {
     const options = ['1st Edition','Autographed','Box Topper','Image Variation','Insert','Miscut','Misprint','One of One','Parallel','Printing Plate','Redemption','Rookie','Serial Numbered','Short Print'];
-    const [features, setFeatures] = useState<string[]>([]);
+    const [features, setFeatures] = useState<string[]>(selectedFeatures);
 
     const handleFeaturesSelect = (feature: string) => {
         setFeatures(prevFeatures => {

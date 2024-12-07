@@ -2,7 +2,7 @@ import { fontScale, styled } from 'nativewind';
 import {liteClient as algoliasearch, MultipleQueriesResponse} from 'algoliasearch/lite';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { View, TextInput, ScrollView, Pressable, Text, Image, Keyboard, ImageBackground, Dimensions} from 'react-native';
+import { View, TextInput, ScrollView, Pressable, Text, Image, Keyboard, ImageBackground, Dimensions, Switch} from 'react-native';
 import { AuthContextProps, Listing, RawTimestamp, RecentSearch, Seller } from '@/types/interfaces';
 import icons from '@/constants/icons';
 import Animated, { SlideInUp, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -11,6 +11,7 @@ import { handleProfile } from '@/src/functions/userInput';
 import { useRouter } from 'expo-router';
 import { fetchSeller } from '@/src/functions/fetch';
 import Modal from 'react-native-modal';
+import Slider from '@react-native-community/slider';
 
 const StyledPressable = styled(Pressable);
 const StyledImage = styled(Image);
@@ -18,6 +19,7 @@ const StyledTextInput = styled(TextInput);
 const StyledText = styled(Text);
 const StyledView = styled(View);
 const StyledImageBackground = styled(ImageBackground);
+const StyledSwitch = styled(Switch);
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const ALGOLIA_APP_ID = process.env.EXPO_PUBLIC_ALGOLIA_APP_ID;
@@ -383,7 +385,12 @@ const ResultsPage = () => {
   const applySorting = () => {
     fetchResults();
   };
+
+  const [filterSold, setFilterSold] = useState(false);
+
+  const toggleSwitch = () => setFilterSold((previousState) => !previousState);
   
+  const [priceRange, setPriceRange] = useState(0);
 
   return (
     <StyledView className='flex-1'>
@@ -603,7 +610,7 @@ const ResultsPage = () => {
         marginTop: 108,
       }}
     >
-      <StyledView className="bg-white h-96 w-full rounded-2xl pt-2">
+      <StyledView className="bg-white h-[432] w-full rounded-2xl pt-2">
         <Animated.View
           style={[
             animatedModalStyle,
@@ -681,7 +688,7 @@ const ResultsPage = () => {
                 </StyledText>
                 <StyledView className="flex-row space-x-2">
                   <StyledPressable
-                    className={`rounded-lg px-4 border-2 active:opacity-50 ${
+                    className={`rounded-lg px-4 border-2 active:opacity-50 w-28 items-center ${
                       sorting.price === 'desc' ? 'bg-primary border-primary' : ''
                     }`}
                     onPress={() => {
@@ -693,7 +700,7 @@ const ResultsPage = () => {
                     </StyledText>
                   </StyledPressable>
                   <StyledPressable
-                    className={`rounded-lg px-4 border-2 active:opacity-50 ${
+                    className={`rounded-lg px-4 border-2 active:opacity-50 w-28 items-center ${
                       sorting.price === 'asc' ? 'bg-primary border-primary' : ''
                     }`}
                     onPress={() => {
@@ -705,6 +712,72 @@ const ResultsPage = () => {
                     </StyledText>
                   </StyledPressable>
                 </StyledView>
+              </StyledView>
+
+              <StyledView className="flex-row justify-between items-center">
+                <StyledText className="font-bold text-darkGray w-28" style={{ fontSize: 16 }}>
+                  Condition:
+                </StyledText>
+                <StyledView className="flex-row space-x-2">
+                  <StyledPressable
+                    className={`rounded-lg px-4 border-2 active:opacity-50 w-28 items-center ${
+                      sorting.price === 'desc' ? 'bg-primary border-primary' : ''
+                    }`}
+                    onPress={() => {
+                      clearSort('price', sorting.price === 'desc' ? null : 'desc'); // Toggle "High to Low"
+                    }}
+                  >
+                    <StyledText className={`pt-2 pb-2 font-bold ${sorting.price === 'desc' && 'text-white'}`}>
+                      Graded
+                    </StyledText>
+                  </StyledPressable>
+                  <StyledPressable
+                    className={`rounded-lg px-4 border-2 active:opacity-50 w-28 items-center ${
+                      sorting.price === 'asc' ? 'bg-primary border-primary' : ''
+                    }`}
+                    onPress={() => {
+                      clearSort('price', sorting.price === 'asc' ? null : 'asc'); // Toggle "Low to High"
+                    }}
+                  >
+                    <StyledText className={`pt-2 pb-2 font-bold ${sorting.price === 'asc' && 'text-white'}`}>
+                      Ungraded
+                    </StyledText>
+                  </StyledPressable>
+                </StyledView>
+              </StyledView>
+
+              <StyledView className="flex-row justify-between items-center">
+                <StyledText className="font-bold text-darkGray w-28" style={{ fontSize: 16 }}>
+                  Sold:
+                </StyledText>
+                <Switch
+                  trackColor={{ false: '#767577', true: '#FF5757' }}
+                  thumbColor='#FFFFFF'
+                  ios_backgroundColor="#3e3e3e" 
+                  onValueChange={toggleSwitch} 
+                  value={filterSold} 
+                />
+              </StyledView>
+
+              <StyledView className="flex-row items-center justify-between">
+                <StyledText className="font-bold text-darkGray w-28" style={{ fontSize: 16 }}>
+                  Price:
+                </StyledText>
+                <Slider
+                  style={{
+                    width: 232,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                  minimumValue={0} // Minimum value
+                  maximumValue={100} // Maximum value
+                  step={1} // Steps (e.g., increments by 1)
+                  value={priceRange} // Current value
+                  onValueChange={(val) => setPriceRange(val)} // Called when value changes
+                  minimumTrackTintColor="#FF5757" // Color of the track before the thumb
+                  maximumTrackTintColor="#D3D3D3" // Color of the track after the thumb
+                  thumbTintColor="#FF5757" // Color of the thumb
+                />
               </StyledView>
 
               {/* Apply Button */}
@@ -734,7 +807,7 @@ const ResultsPage = () => {
             <StyledView className="w-full h-px bg-lightGray" />
 
             {/* Sorting Options */}
-            <StyledView className="mt-4 pt-2 pl-4 pr-4 gap-y-4">
+            <StyledView className="p-4 gap-y-4">
               {/* Sort by Price */}
               <StyledView className="flex-row justify-between items-center">
                 <StyledText className="font-bold text-darkGray w-28" style={{ fontSize: 16 }}>

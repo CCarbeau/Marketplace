@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Pressable, Image, Alert, Animated, TextInput, Text, ScrollView, ImageBackground, Dimensions, Platform } from 'react-native';
+import { View, Pressable, Image, Alert, Animated, TextInput, Text, ScrollView, ImageBackground, Dimensions, Platform, KeyboardAvoidingView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Href, Router, useRouter } from 'expo-router';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject, list } from 'firebase/storage';
@@ -51,6 +51,7 @@ const CreateListing = () => {
   const [condition, setCondition] = useState('');
   const [grader, setGrader] = useState('');
   const [grade, setGrade] = useState('');
+  const [certNum, setCertNum] = useState('');
   const [quality, setQuality] = useState('');
   const [category, setCategory] = useState('');
   const [genre, setGenre] = useState('')
@@ -294,6 +295,7 @@ const CreateListing = () => {
         condition,
         ...(condition === 'graded' && grader ? { grader } : {}),
         ...(condition === 'graded' && grade ? { grade } : {}),
+        ...(condition === 'graded' && includeIfDefined('certificationNumber', certNum)),
         ...(condition === 'ungraded' && quality ? { quality } : {}),
         quantity,
         category,
@@ -446,761 +448,793 @@ const CreateListing = () => {
 
   return (
     <StyledView className='justify-center flex-1'>
-      <StyledView className={'bg-white flex-1 h-full w-full'}>
-        <StyledScrollView className=''>
-          <StyledView className='h-96'>
-            <StyledScrollView className='flex-1 h-full' horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={handleImageScroll} scrollEventThrottle={16}>
-              {images.map((imageUri, index) => (
-                  <StyledImageBackground
-                    key={index}
-                    source={{ uri: imageUri }}
-                    className="h-96"
-                    style={{ width: screenWidth }}
-                  >
-                    <StyledPressable className='flex justify-center items-center absolute top-8 right-4 w-8 h-8 bg-black rounded-full active:bg-gray' onPress={handleDelete} style={{ zIndex: 10 }}>
-                      <StyledImage source={icons.trash} className='w-5 h-5'></StyledImage>
-                    </StyledPressable>
-                  </StyledImageBackground>
+      <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={144}
+      >
+        <StyledView className={'bg-white flex-1 h-full w-full'}>
+          <StyledScrollView className='w-full'>
+            <StyledView className='h-96'>
+              <StyledScrollView className='flex-1 h-full' horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={handleImageScroll} scrollEventThrottle={16}>
+                {images.map((imageUri, index) => (
+                    <StyledImageBackground
+                      key={index}
+                      source={{ uri: imageUri }}
+                      className="h-96"
+                      style={{ width: screenWidth }}
+                    >
+                      <StyledPressable className='flex justify-center items-center absolute top-8 right-4 w-8 h-8 bg-black rounded-full active:bg-gray' onPress={handleDelete} style={{ zIndex: 10 }}>
+                        <StyledImage source={icons.trash} className='w-5 h-5'></StyledImage>
+                      </StyledPressable>
+                    </StyledImageBackground>
+                  ))}
+                <StyledPressable onPress={pickImage} className='flex-1 h-96 justify-center items-center bg-gray' style={{ width: screenWidth }}>
+                  <StyledText className='text-8xl font-bold'>+</StyledText>
+                  <StyledText className='text-2xl font-bold'>Add photos</StyledText>
+                </StyledPressable>
+              </StyledScrollView>
+              <StyledView className='flex flex-row justify-center gap-x-8 bottom-8'>
+                {[...images,null].map((_, index) => (
+                  <StyledView key={index} className={`${index===imageIndex ? 'bg-primary': 'bg-white'} w-3 h-3 rounded-full`} />
                 ))}
-              <StyledPressable onPress={pickImage} className='flex-1 h-96 justify-center items-center bg-gray' style={{ width: screenWidth }}>
-                <StyledText className='text-8xl font-bold'>+</StyledText>
-                <StyledText className='text-2xl font-bold'>Add photos</StyledText>
-              </StyledPressable>
-            </StyledScrollView>
-            <StyledView className='flex flex-row justify-center gap-x-8 bottom-8'>
-              {[...images,null].map((_, index) => (
-                <StyledView key={index} className={`${index===imageIndex ? 'bg-primary': 'bg-white'} w-3 h-3 rounded-full`} />
-              ))}
+              </StyledView>
             </StyledView>
-          </StyledView>
-          <StyledView className='w-full pl-4 pr-4'>
-            <StyledTextInput 
-              className='text-xl font-bold mt-2' 
-              placeholder='Title' 
-              value={title} 
-              onChangeText={(text) => setTitle(text)} 
-            />
-            <StyledTextInput 
-              className='text-gray text-left mt-1' 
-              placeholder='Description' 
-              value={description} 
-              onChangeText={(text) => setDes(text)} 
-            />
-            <StyledView className='flex flex-row items-center mt-4'>
-              <StyledText className='text-xl font-bold'>$</StyledText>
+            <StyledView className='flex w-full pl-4 pr-4'>
               <StyledTextInput 
-                className='ml-1 font-bold' 
-                style={{fontSize: 20}}
-                placeholder='Price' 
-                value={price} 
-                onChangeText={(text) => setPrice(text)} 
-                keyboardType='numeric' 
+                className='text-xl font-bold mt-2 text-wrap' 
+                placeholder='Title' 
+                value={title} 
+                onChangeText={(text) => setTitle(text)} 
+                style={{lineHeight: 24}}
+                maxLength={75}
+                multiline={true}
               />
-              <StyledText className='text-gray pl-2'>+ shipping & taxes</StyledText>
-            </StyledView>
-            <StyledView className="flex flex-row items-center justify-between">
-              <StyledView className="flex flex-row items-center">
-                <StyledText className='text-lg'>Quantity:</StyledText>
-                <StyledView className='border-2 border-gray rounded-xl ml-2'>
-                  <StyledTextInput 
-                    className="text-center w-12 pt-2 pb-2 -ml-1 -mr-1 font-bold"
-                    style={{fontSize: 16}}
-                    value={quantity} 
-                    onChangeText={(text) => setQuantity(text)} 
-                    keyboardType="numeric" 
-                  />
+              <StyledTextInput 
+                className='text-darkGray text-left mt-1' 
+                placeholder='Description' 
+                value={description} 
+                onChangeText={(text) => setDes(text)} 
+                maxLength={150}
+                multiline={true}
+              />
+              <StyledView className='flex flex-row items-center mt-4'>
+                <StyledText className='text-xl font-bold'>$</StyledText>
+                <StyledTextInput 
+                  className='ml-1 font-bold' 
+                  style={{fontSize: 20}}
+                  placeholder='Price' 
+                  value={price} 
+                  onChangeText={(text) => setPrice(text)} 
+                  keyboardType='numeric' 
+                />
+                <StyledText className='text-gray pl-2'>+ shipping & taxes</StyledText>
+              </StyledView>
+              <StyledView className="flex flex-row items-center justify-between">
+                <StyledView className="flex flex-row items-center">
+                  <StyledText className='text-lg'>Quantity:</StyledText>
+                  <StyledView className='border-2 border-gray rounded-xl ml-2'>
+                    <StyledTextInput 
+                      className="text-center w-12 pt-2 pb-2 -ml-1 -mr-1 font-bold"
+                      style={{fontSize: 16}}
+                      value={quantity} 
+                      onChangeText={(text) => setQuantity(text)} 
+                      keyboardType="numeric" 
+                    />
+                  </StyledView>
                 </StyledView>
               </StyledView>
             </StyledView>
-          </StyledView>
-          <StyledView className='bg-gray mt-4 w-full h-px'/>
-          <StyledView className='flex pl-4 pr-4 mt-4 w-full'>
-            <StyledText className='text-xl font-bold text-black'>Details</StyledText>
-            <StyledView className="flex-row justify-between items-center">
-                <StyledText className="text-lg w-24 text-right mr-4">
-                  Condition:
-                </StyledText>
-                <StyledView className="flex-1 flex-row justify-between gap-x-2">
-                  <StyledPressable
-                    className={`flex-1 rounded-lg border-2 h-8 items-center justify-center active:opacity-50 ${condition === 'graded' && ('bg-primary border-primary')}`}
-                    onPress={() => {
-                      setCondition('graded');
-                    }}
-                  >
-                    <StyledText className={`font-bold ${condition === 'graded' && ('text-white')}`}>
-                      Graded
-                    </StyledText>
-                  </StyledPressable>
-                  <StyledPressable
-                    className={`flex-1 rounded-lg border-2 h-8 items-center justify-center active:opacity-50 ${condition === 'ungraded' && ('bg-primary border-primary')}`}
-                    onPress={() => {
-                      setCondition('ungraded');
-                    }}
-                  >
-                    <StyledText className={`font-bold ${condition === 'ungraded' && ('text-white')}`}>
-                      Ungraded
-                    </StyledText>
-                  </StyledPressable>
+            <StyledView className='bg-gray mt-4 w-full h-px'/>
+            <StyledView className='flex pl-4 pr-4 mt-4 w-full'>
+              <StyledText className='text-xl font-bold text-black'>Details</StyledText>
+              <StyledView className="flex-row justify-between items-center">
+                  <StyledText className="text-lg w-24 text-right mr-4">
+                    Condition:
+                  </StyledText>
+                  <StyledView className="flex-1 flex-row justify-between gap-x-2">
+                    <StyledPressable
+                      className={`flex-1 rounded-lg border-2 h-8 items-center justify-center active:opacity-50 ${condition === 'graded' && ('bg-primary border-primary')}`}
+                      onPress={() => {
+                        setCondition('graded');
+                      }}
+                    >
+                      <StyledText className={`font-bold ${condition === 'graded' && ('text-white')}`}>
+                        Graded
+                      </StyledText>
+                    </StyledPressable>
+                    <StyledPressable
+                      className={`flex-1 rounded-lg border-2 h-8 items-center justify-center active:opacity-50 ${condition === 'ungraded' && ('bg-primary border-primary')}`}
+                      onPress={() => {
+                        setCondition('ungraded');
+                      }}
+                    >
+                      <StyledText className={`font-bold ${condition === 'ungraded' && ('text-white')}`}>
+                        Ungraded
+                      </StyledText>
+                    </StyledPressable>
+                  </StyledView>
                 </StyledView>
+                {condition === 'graded' ? (
+                  <>
+                    <StyledView className='flex-row mt-2 justify-between items-center'>
+                      <StyledText className='text-right w-24 mr-4'>Grader:</StyledText>
+                      <StyledPressable className='flex-1 border-2 border-gray rounded-lg active:opacity-50 justify-center h-8' onPress={() => {setGraderModalVisible(true);}}>
+                        {grader==='' ? (
+                          <StyledText className='text text-gray text-center font-bold'>Select Grader</StyledText>
+                        ):(
+                          <StyledText className='text-primary text-center font-bold shadow-sm'>{grader}</StyledText>
+                        )}
+                      </StyledPressable>
+                    </StyledView>
+
+                    {grader !== '' && (
+                      <>
+                        <StyledView className='flex-row mt-2 justify-between items-center'>
+                          <StyledText className='text-right w-24 mr-4'>Grade:</StyledText>
+                          <StyledPressable className='flex-1 border-2 border-gray rounded-lg active:opacity-50 justify-center h-8' onPress={() => {setGradeModalVisible(true);}}>
+                            {grade==='' ? (
+                              <StyledText className='text text-gray text-center font-bold'>Select Grade</StyledText>
+                            ):(
+                              <StyledText className='text-primary text-center font-bold shadow-sm'>{grade}</StyledText>
+                            )}
+                          </StyledPressable>
+                        </StyledView>
+                        <StyledView className='flex-row mt-2 justify-between items-center'>
+                          <StyledText className='text-right w-24 mr-4'>Cert. Number:</StyledText>
+                          <StyledTextInput 
+                            className='flex-1 border-2 border-gray rounded-lg focus:border-primary justify-center h-8 text text-primary text-center font-bold' 
+                            placeholder='Certification Number (Optional)'
+                            maxLength={20}
+                            value={certNum}
+                            onChangeText={(text) => {setCertNum(text)}}
+                            keyboardType='numeric'
+                          >
+                          
+                          </StyledTextInput>
+                        </StyledView>
+                      </>
+                    )}
+                  </>
+                ) : condition === 'ungraded' ? (
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Quality:</StyledText>
+                    <StyledPressable className='flex-1 border-2 border-gray rounded-lg active:opacity-50 justify-center h-8' onPress={() => {setQualityModalVisible(true);}}>
+                      {quality==='' ? (
+                        <StyledText className='text text-gray text-center font-bold'>Select Quality</StyledText>
+                      ):(
+                        <StyledText className='text-primary text-center font-bold shadow-sm'>{quality}</StyledText>
+                      )}
+                    </StyledPressable>
+                  </StyledView>
+                ) : (
+                  <></>
+                )}
+              <StyledView className='flex-row mt-2 justify-between'>
+                <StyledText className='text-lg w-24 text-right mr-4'>Category:</StyledText>
+                <StyledPressable className='flex-1 border-2 border-gray rounded-lg active:opacity-50 justify-center h-8' onPress={() => {setCategoryModalVisible(true);}}>
+                  {category==='' ? (
+                    <StyledText className='text text-gray text-center font-bold'>Select Category</StyledText>
+                  ):(
+                    <StyledText className='text-primary text-center font-bold shadow-sm'>{category}</StyledText>
+                  )}
+                </StyledPressable>
               </StyledView>
-              {condition === 'graded' ? (
+
+              {category.slice(-7)==='Singles' && genre==='Sports Cards' && (
                 <>
                   <StyledView className='flex-row mt-2 justify-between items-center'>
-                    <StyledText className='text-right w-24 mr-4'>Grader:</StyledText>
-                    <StyledPressable className='flex-1 border-2 border-gray rounded-lg active:opacity-50 justify-center h-8' onPress={() => {setGraderModalVisible(true);}}>
-                      {grader==='' ? (
-                        <StyledText className='text text-gray text-center font-bold'>Select Grader</StyledText>
-                      ):(
-                        <StyledText className='text-primary text-center font-bold shadow-sm'>{grader}</StyledText>
+                    <StyledText className='text-right w-24 mr-4'>Athlete:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg min-h-8 justify-center' style={{minHeight: 32}}>
+                      <StyledTextInput 
+                        className='text-primary font-bold text-center shadow-sm' 
+                        placeholder='Athlete Name'
+                        placeholderTextColor='gray'
+                        value={athlete} 
+                        onChangeText={(text) => setAthlete(text)}
+                        maxLength={50}
+                      />
+                    </StyledView>
+                  </StyledView>
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Team:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg justify-center' style={{minHeight: 32}}>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Team Name'
+                        placeholderTextColor='gray'
+                        value={team} 
+                        onChangeText={(text) => setTeam(text)}
+                        maxLength={50}
+                      />
+                    </StyledView>
+                  </StyledView>
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg justify-center' style={{minHeight: 32}}>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Year'
+                        placeholderTextColor='gray'
+                        value={year} 
+                        onChangeText={(text) => setYear(text)}
+                        keyboardType='numeric'
+                        maxLength={10}
+                      />
+                    </StyledView>
+                  </StyledView>
+
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Brand:</StyledText>
+                    <StyledPressable 
+                      className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
+                      onPress={() => setBrandModalVisible(true)}
+                    >
+                      {brand === '' ? (
+                        <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
+                      ) : (
+                        <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
                       )}
                     </StyledPressable>
                   </StyledView>
 
-                  {grader !== '' && (
-                    <StyledView className='flex-row mt-2 justify-between items-center'>
-                      <StyledText className='text-right w-24 mr-4'>Grade:</StyledText>
-                      <StyledPressable className='flex-1 border-2 border-gray rounded-lg active:opacity-50 justify-center h-8' onPress={() => {setGradeModalVisible(true);}}>
-                        {grade==='' ? (
-                          <StyledText className='text text-gray text-center font-bold'>Select Grade</StyledText>
-                        ):(
-                          <StyledText className='text-primary text-center font-bold shadow-sm'>{grade}</StyledText>
-                        )}
-                      </StyledPressable>
-                    </StyledView>
-                  )}
-                </>
-              ) : condition === 'ungraded' ? (
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Quality:</StyledText>
-                  <StyledPressable className='flex-1 border-2 border-gray rounded-lg active:opacity-50 justify-center h-8' onPress={() => {setQualityModalVisible(true);}}>
-                    {quality==='' ? (
-                      <StyledText className='text text-gray text-center font-bold'>Select Quality</StyledText>
-                    ):(
-                      <StyledText className='text-primary text-center font-bold shadow-sm'>{quality}</StyledText>
-                    )}
-                  </StyledPressable>
-                </StyledView>
-              ) : (
-                <></>
-              )}
-            <StyledView className='flex-row mt-2 justify-between'>
-              <StyledText className='text-lg w-24 text-right mr-4'>Category:</StyledText>
-              <StyledPressable className='flex-1 border-2 border-gray rounded-lg active:opacity-50 justify-center h-8' onPress={() => {setCategoryModalVisible(true);}}>
-                {category==='' ? (
-                  <StyledText className='text text-gray text-center font-bold'>Select Category</StyledText>
-                ):(
-                  <StyledText className='text-primary text-center font-bold shadow-sm'>{category}</StyledText>
-                )}
-              </StyledPressable>
-            </StyledView>
-
-            {category.slice(-7)==='Singles' && genre==='Sports Cards' && (
-              <>
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Athlete:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-primary font-bold text-center shadow-sm' 
-                      placeholder='Athlete Name'
-                      placeholderTextColor='gray'
-                      value={athlete} 
-                      onChangeText={(text) => setAthlete(text)}
-                    />
-                  </StyledView>
-                </StyledView>
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Team:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Team Name'
-                      placeholderTextColor='gray'
-                      value={team} 
-                      onChangeText={(text) => setTeam(text)}
-                    />
-                  </StyledView>
-                </StyledView>
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Year'
-                      placeholderTextColor='gray'
-                      value={year} 
-                      onChangeText={(text) => setYear(text)}
-                      keyboardType='numeric'
-                    />
-                  </StyledView>
-                </StyledView>
-
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Brand:</StyledText>
-                  <StyledPressable 
-                    className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
-                    onPress={() => setBrandModalVisible(true)}
-                  >
-                    {brand === '' ? (
-                      <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
-                    ) : (
-                      <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
-                    )}
-                  </StyledPressable>
-                </StyledView>
-
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Set:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Set Name'
-                      placeholderTextColor='gray'
-                      value={set} 
-                      onChangeText={(text) => setSet(text)}
-                    />
-                  </StyledView>
-                </StyledView>
-
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Features:</StyledText>
-                  <StyledPressable 
-                    className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
-                    onPress={() => setFeaturesModalVisible(true)}
-                  >
-                    {features.length === 0 ? (
-                      <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Features</StyledText>
-                    ) : (
-                      <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{features.join(', ')}</StyledText>
-                    )}
-                  </StyledPressable>
-                </StyledView>
-
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Parallel:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Parallel Name'
-                      placeholderTextColor='gray'
-                      value={parallel} 
-                      onChangeText={(text) => setParallel(text)}
-                    />
-                  </StyledView>
-                </StyledView>
-
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Print Run:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Print Run'
-                      placeholderTextColor='gray'
-                      value={printRun} 
-                      onChangeText={(text) => setPrintRun(text)}
-                      keyboardType='numeric'
-                    />
-                  </StyledView>
-                </StyledView>
-              </>
-            )}
-
-            {category.slice(-3)==='Lot' && genre==='Sports Cards' && (
-              <>
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Cards in Lot:</StyledText>
-                  <StyledView className='flex-row items-center border-2 border-gray rounded-lg h-8'>
-                    <StyledTextInput 
-                      className='text-center w-12 font-bold shadow-sm text-primary'
-                      style={{ fontSize: 16 }}
-                      value={cardsInLot} 
-                      onChangeText={(text) => setCardsInLot(text)} 
-                      keyboardType="numeric" 
-                    />
-                    <StyledText className='text-md text-gray pr-2'>Cards</StyledText>
-                  </StyledView>
-                </StyledView>
-              
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Athletes:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Athlete Names'
-                      placeholderTextColor='gray'
-                      value={athlete} 
-                      onChangeText={(text) => setAthlete(text)}
-                    />
-                  </StyledView>
-                </StyledView>
-              
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Teams:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Team Names'
-                      placeholderTextColor='gray'
-                      value={team} 
-                      onChangeText={(text) => setTeam(text)}
-                    />
-                  </StyledView>
-                </StyledView>
-              
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Year'
-                      placeholderTextColor='gray'
-                      value={year} 
-                      onChangeText={(text) => setYear(text)}
-                      keyboardType='numeric'
-                    />
-                  </StyledView>
-                </StyledView>
-              
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Brand:</StyledText>
-                  <StyledPressable 
-                    className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
-                    onPress={() => setBrandModalVisible(true)}
-                  >
-                    {brand === '' ? (
-                      <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
-                    ) : (
-                      <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
-                    )}
-                  </StyledPressable>
-                </StyledView>
-              
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Set:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Set Name'
-                      placeholderTextColor='gray'
-                      value={set} 
-                      onChangeText={(text) => setSet(text)}
-                    />
-                  </StyledView>
-                </StyledView>
-              
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Features:</StyledText>
-                  <StyledPressable 
-                    className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
-                    onPress={() => setFeaturesModalVisible(true)}
-                  >
-                    {features.length === 0 ? (
-                      <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Features</StyledText>
-                    ) : (
-                      <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{features.join(', ')}</StyledText>
-                    )}
-                  </StyledPressable>
-                </StyledView>
-              </>            
-            )}
-
-            {category.slice(-3)==='Wax' && genre==='Sports Cards' && (
-              <>
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Brand:</StyledText>
-                  <StyledPressable 
-                    className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
-                    onPress={() => setBrandModalVisible(true)}
-                  >
-                    {brand === '' ? (
-                      <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
-                    ) : (
-                      <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
-                    )}
-                  </StyledPressable>
-                </StyledView>
-              
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Set:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Set Name'
-                      placeholderTextColor='gray'
-                      value={set} 
-                      onChangeText={(text) => setSet(text)}
-                    />
-                  </StyledView>
-                </StyledView>
-              
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Year'
-                      placeholderTextColor='gray'
-                      value={year} 
-                      onChangeText={(text) => setYear(text)}
-                      keyboardType='numeric'
-                    />
-                  </StyledView>
-                </StyledView>
-              </>
-            )}
-
-            {category.slice(-5)==='Break' && genre==='Sports Cards' && (
-              <>
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Athlete(s):</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Athlete Names'
-                      placeholderTextColor='gray'
-                      value={athlete} 
-                      onChangeText={(text) => setAthlete(text)}
-                    />
-                  </StyledView>
-                </StyledView>
-              
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Team(s):</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Team Names'
-                      placeholderTextColor='gray'
-                      value={team} 
-                      onChangeText={(text) => setTeam(text)}
-                    />
-                  </StyledView>
-                </StyledView>
-              
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Brand:</StyledText>
-                  <StyledPressable 
-                    className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
-                    onPress={() => setBrandModalVisible(true)}
-                  >
-                    {brand === '' ? (
-                      <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
-                    ) : (
-                      <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
-                    )}
-                  </StyledPressable>
-                </StyledView>
-              
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Set:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Set Name'
-                      placeholderTextColor='gray'
-                      value={set} 
-                      onChangeText={(text) => setSet(text)}
-                    />
-                  </StyledView>
-                </StyledView>
-              
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Year'
-                      placeholderTextColor='gray'
-                      value={year} 
-                      onChangeText={(text) => setYear(text)}
-                      keyboardType='numeric'
-                    />
-                  </StyledView>
-                </StyledView>
-              </>
-            )}
-
-            {genre === 'Sports Memorabilia' && (
-              <>
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Athlete:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Athlete Name'
-                      placeholderTextColor='gray'
-                      value={athlete} 
-                      onChangeText={(text) => setAthlete(text)}
-                    />
-                  </StyledView>
-                </StyledView>
-              
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Team:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Team Name'
-                      placeholderTextColor='gray'
-                      value={team} 
-                      onChangeText={(text) => setTeam(text)}
-                    />
-                  </StyledView>
-                </StyledView>
-              
-                <StyledView className='flex-row mt-2 justify-between items-center'>
-                  <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
-                  <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
-                    <StyledTextInput 
-                      className='text-md text-primary text-center font-bold justify-center shadow-sm' 
-                      placeholder='Year'
-                      placeholderTextColor='gray'
-                      value={year} 
-                      onChangeText={(text) => setYear(text)}
-                      keyboardType='numeric'
-                    />
-                  </StyledView>
-                </StyledView>
-              </>
-            )}
-
-          </StyledView>
-
-
-          <StyledView className='bg-gray mt-4 w-full h-px'/>
-
-
-          <StyledView className='flex pl-4 pr-4 mt-4 w-full'>
-            <StyledText className='text-xl font-bold text-black'>Pricing</StyledText>
-            <StyledView className='flex-row gap-x-4 mt-2 justify-between'>      
-                <StyledPressable className={`${listingType==='auction' && 'bg-primary border-primary'} flex-1 border-2 rounded-2xl active:bg-gray`} onPress={() => setListingType('auction')}>
-                  <StyledText className={`${listingType==='auction' && 'text-white'} font-bold text-center p-2`}>Auction</StyledText>
-                </StyledPressable>
-                <StyledPressable className={`${listingType==='fixed' && 'bg-primary border-primary'} flex-1 border-2 rounded-2xl active:bg-gray`} onPress={() => setListingType('fixed')}>
-                  <StyledText className={`${listingType==='fixed' && 'text-white'} font-bold text-center p-2`}>Buy Now</StyledText>
-                </StyledPressable>
-            </StyledView>
-
-              <>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
-                  <StyledText className='text-lg'>Price:</StyledText>
-                  <StyledView className='flex-row items-center justify-end'>
-                    <StyledText className='font-bold text-xl'>$ </StyledText>
-                    <StyledView className='flex-row justify-center items-center border-2 border-gray rounded-lg w-1/2 h-8'>
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Set:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg justify-center' style={{minHeight: 32}}>
                       <StyledTextInput 
-                        className='text-primary text-center font-bold shadow-sm h-8 w-full' 
-                        style={{fontSize:16}}
-                        placeholder='Price'
+                        className='text-md text-primary text-center font-bold shadow-sm' 
+                        placeholder='Set Name'
                         placeholderTextColor='gray'
-                        value={price} 
-                        onChangeText={(text) => setPrice(text)}
+                        value={set}
+                        onChangeText={(text) => setSet(text)}
+                        maxLength={50}
+                      />
+                    </StyledView>
+                  </StyledView>
+
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Features:</StyledText>
+                    <StyledPressable 
+                      className='flex-1 border-2 border-gray rounded-lg min-h-8 justify-center active:bg-gray'
+                      onPress={() => setFeaturesModalVisible(true)}
+                      style={{minHeight: 32}}
+                    >
+                      {features.length === 0 ? (
+                        <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Features</StyledText>
+                      ) : (
+                        <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{features.join(', ')}</StyledText>
+                      )}
+                    </StyledPressable>
+                  </StyledView>
+
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Parallel:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg min-h-8 justify-center' style={{minHeight: 32}}>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Parallel Name'
+                        placeholderTextColor='gray'
+                        value={parallel} 
+                        onChangeText={(text) => setParallel(text)}
+                        maxLength={25}
+                      />
+                    </StyledView>
+                  </StyledView>
+
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Print Run:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg justify-center' style={{minHeight: 32}}>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Print Run'
+                        placeholderTextColor='gray'
+                        value={printRun} 
+                        onChangeText={(text) => setPrintRun(text)}
                         keyboardType='numeric'
                       />
                     </StyledView>
                   </StyledView>
-                </StyledView>
+                </>
+              )}
 
-                {listingType==='auction' && (
-                  <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
-                    <StyledText className='text-lg'>Duration:</StyledText>
-                    <StyledView className='flex-row items-center border-2 border-gray rounded-xl'>
+              {category.slice(-3)==='Lot' && genre==='Sports Cards' && (
+                <>
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Cards in Lot:</StyledText>
+                    <StyledView className='flex-row items-center border-2 border-gray rounded-lg h-8'>
                       <StyledTextInput 
                         className='text-center w-12 font-bold shadow-sm text-primary'
-                        style={{fontSize: 16}}
-                        value={duration} 
-                        onChangeText={(text) => setDuration(text)} 
+                        style={{ fontSize: 16 }}
+                        value={cardsInLot} 
+                        onChangeText={(text) => setCardsInLot(text)} 
                         keyboardType="numeric" 
                       />
-                      <StyledText className='text-lg mr-2 text-gray'>Day(s)</StyledText>
+                      <StyledText className='text-md text-gray pr-2'>Cards</StyledText>
                     </StyledView>
                   </StyledView>
-                )}
-                <StyledView className="flex-row gap-x-4 mt-2 justify-between">
-                  <StyledText className="text-lg">Allow Offers:</StyledText>
-                  <StyledPressable className={`${offerable?'bg-primary':'border-2 border-gray'} flex justify-center items-center text-xl text-center w-8 h-8 ml-2 font-bold rounded-full active:bg-gray`} onPress={() => {setOfferable(!offerable)}}>
-                    {offerable && (
-                      <StyledImage source={icons.check} className='w-6 h-6'/>
-                    )}
-                  </StyledPressable>
-                </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                  <StyledText className={`${scheduled&&'font-bold'} text-lg`}>Schedule Start: </StyledText>
-                  <StyledPressable className={`${scheduled?'bg-primary':'border-2 border-gray'} flex justify-center items-center text-xl text-center w-8 h-8 ml-2 font-bold rounded-full active:bg-gray`} onPress={() => {setScheduled(!scheduled)}}>
-                    {scheduled && (
-                      <StyledImage source={icons.check} className='w-6 h-6'/>
-                    )}
-                  </StyledPressable>
-                </StyledView>
-                {scheduled && (
-                  <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
-                    <StyledView className='flex-row items-center'>
-                      <StyledText className='text-lg'>Date:</StyledText>
-                      <DateTimePicker
-                        testID="dateTimePicker"
-                        value={date}
-                        mode="date"
-                        is24Hour={true}
-                        display="default"
-                        onChange={(event, selectedDate) => setDate(selectedDate || date)}
-                      />
-                    </StyledView>
-                    <StyledView className='flex-row items-center'>
-                      <StyledText className='text-lg'>Time:</StyledText>
-                      <DateTimePicker
-                        testID="dateTimePicker"
-                        value={time}
-                        mode="time"
-                        is24Hour={true}
-                        display="default"
-                        onChange={(event, selectedTime) => setTime(selectedTime || time)}
+                
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Athletes:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Athlete Names'
+                        placeholderTextColor='gray'
+                        value={athlete} 
+                        onChangeText={(text) => setAthlete(text)}
                       />
                     </StyledView>
                   </StyledView>
-                )}
-                 
-              </>
-          </StyledView>
+                
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Teams:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Team Names'
+                        placeholderTextColor='gray'
+                        value={team} 
+                        onChangeText={(text) => setTeam(text)}
+                      />
+                    </StyledView>
+                  </StyledView>
+                
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Year'
+                        placeholderTextColor='gray'
+                        value={year} 
+                        onChangeText={(text) => setYear(text)}
+                        keyboardType='numeric'
+                      />
+                    </StyledView>
+                  </StyledView>
+                
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Brand:</StyledText>
+                    <StyledPressable 
+                      className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
+                      onPress={() => setBrandModalVisible(true)}
+                    >
+                      {brand === '' ? (
+                        <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
+                      ) : (
+                        <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
+                      )}
+                    </StyledPressable>
+                  </StyledView>
+                
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Set:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Set Name'
+                        placeholderTextColor='gray'
+                        value={set} 
+                        onChangeText={(text) => setSet(text)}
+                      />
+                    </StyledView>
+                  </StyledView>
+                
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Features:</StyledText>
+                    <StyledPressable 
+                      className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
+                      onPress={() => setFeaturesModalVisible(true)}
+                    >
+                      {features.length === 0 ? (
+                        <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Features</StyledText>
+                      ) : (
+                        <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{features.join(', ')}</StyledText>
+                      )}
+                    </StyledPressable>
+                  </StyledView>
+                </>            
+              )}
 
-          <StyledView className='bg-gray mt-4 w-full h-px'/>
-          <StyledView className='flex pl-4 pr-4 mt-4 w-full'>
-            <StyledText className='text-xl font-bold text-black'>Shipping</StyledText>
-            <StyledView className='flex-row gap-x-4 mt-2 justify-between'>      
-                <StyledPressable className={`${shippingType==='variable' && 'bg-primary border-primary'} flex-1 border-2 rounded-2xl active:bg-gray`} onPress={() => setShippingType('variable')}>
-                  <StyledText className={`${shippingType==='variable' && 'text-white'}  font-bold text-center p-2`}>Variable</StyledText>
-                </StyledPressable>
-                <StyledPressable className={`${shippingType==='fixed' && 'bg-primary border-primary'} flex-1 border-2 rounded-2xl active:bg-gray`} onPress={() => setShippingType('fixed')}>
-                  <StyledText className={`${shippingType==='fixed' && 'text-white'} font-bold text-center p-2`}>Fixed Rate</StyledText>
-                </StyledPressable>
+              {category.slice(-3)==='Wax' && genre==='Sports Cards' && (
+                <>
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Brand:</StyledText>
+                    <StyledPressable 
+                      className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
+                      onPress={() => setBrandModalVisible(true)}
+                    >
+                      {brand === '' ? (
+                        <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
+                      ) : (
+                        <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
+                      )}
+                    </StyledPressable>
+                  </StyledView>
+                
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Set:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Set Name'
+                        placeholderTextColor='gray'
+                        value={set} 
+                        onChangeText={(text) => setSet(text)}
+                      />
+                    </StyledView>
+                  </StyledView>
+                
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Year'
+                        placeholderTextColor='gray'
+                        value={year} 
+                        onChangeText={(text) => setYear(text)}
+                        keyboardType='numeric'
+                      />
+                    </StyledView>
+                  </StyledView>
+                </>
+              )}
+
+              {category.slice(-5)==='Break' && genre==='Sports Cards' && (
+                <>
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Athlete(s):</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Athlete Names'
+                        placeholderTextColor='gray'
+                        value={athlete} 
+                        onChangeText={(text) => setAthlete(text)}
+                      />
+                    </StyledView>
+                  </StyledView>
+                
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Team(s):</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Team Names'
+                        placeholderTextColor='gray'
+                        value={team} 
+                        onChangeText={(text) => setTeam(text)}
+                      />
+                    </StyledView>
+                  </StyledView>
+                
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Brand:</StyledText>
+                    <StyledPressable 
+                      className='flex-1 border-2 border-gray rounded-lg h-8 justify-center active:bg-gray'
+                      onPress={() => setBrandModalVisible(true)}
+                    >
+                      {brand === '' ? (
+                        <StyledText className='text-md text-gray text-center font-bold shadow-sm'>Select Brand</StyledText>
+                      ) : (
+                        <StyledText className='text-md text-primary text-center font-bold shadow-sm'>{brand}</StyledText>
+                      )}
+                    </StyledPressable>
+                  </StyledView>
+                
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Set:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Set Name'
+                        placeholderTextColor='gray'
+                        value={set} 
+                        onChangeText={(text) => setSet(text)}
+                      />
+                    </StyledView>
+                  </StyledView>
+                
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Year'
+                        placeholderTextColor='gray'
+                        value={year} 
+                        onChangeText={(text) => setYear(text)}
+                        keyboardType='numeric'
+                      />
+                    </StyledView>
+                  </StyledView>
+                </>
+              )}
+
+              {genre === 'Sports Memorabilia' && (
+                <>
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Athlete:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Athlete Name'
+                        placeholderTextColor='gray'
+                        value={athlete} 
+                        onChangeText={(text) => setAthlete(text)}
+                      />
+                    </StyledView>
+                  </StyledView>
+                
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Team:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Team Name'
+                        placeholderTextColor='gray'
+                        value={team} 
+                        onChangeText={(text) => setTeam(text)}
+                      />
+                    </StyledView>
+                  </StyledView>
+                
+                  <StyledView className='flex-row mt-2 justify-between items-center'>
+                    <StyledText className='text-right w-24 mr-4'>Year:</StyledText>
+                    <StyledView className='flex-1 border-2 border-gray rounded-lg h-8 justify-center'>
+                      <StyledTextInput 
+                        className='text-md text-primary text-center font-bold justify-center shadow-sm' 
+                        placeholder='Year'
+                        placeholderTextColor='gray'
+                        value={year} 
+                        onChangeText={(text) => setYear(text)}
+                        keyboardType='numeric'
+                      />
+                    </StyledView>
+                  </StyledView>
+                </>
+              )}
+
             </StyledView>
 
-            {shippingType==='variable' && (
-              <>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
-                  <StyledText className='text-lg'>Weight:</StyledText>
-                  <StyledView className='flex-row items-center border-2 border-gray rounded-xl'>
-                    <StyledTextInput 
-                      className='text-center w-12 font-bold shadow-sm text-primary'
-                      style={{fontSize: 16}}
-                      value={weight} 
-                      onChangeText={(text) => setWeight(text)} 
-                      keyboardType="numeric" 
-                    />
-                    <StyledText className='text-lg mr-2 text-gray'>Oz(s)</StyledText>
-                  </StyledView>
-                </StyledView>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
-                  <StyledText className='text-lg'>Shipping Service:</StyledText>
-                  <StyledPressable className='border-2 border-gray rounded-lg w-1/2 active:bg-gray h-8 justify-center' onPress={() => {setShippingModalVisible(true);}}>
-                    {shippingProfile==='' ? (
-                      <StyledText className='text-gray text-center font-bold'>Select Shipping</StyledText>
-                    ):(
-                      <StyledText className='pr-2 pl-2 text-lg text-primary text-center font-bold shadow-sm'>{shippingProfile}</StyledText>
-                    )}
-                  </StyledPressable>
-                </StyledView>
-              </>
-            )}
 
-            {shippingType==='fixed' && (
-              <>
-                <StyledText className='text-gray mt-1'>*Charge your buyer a flat shipping cost. If the amount is less than the shipping cost, you pay the difference. Choose this option to use your own shipping labels or offer your buyers discounted shipping.</StyledText>
-                <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
-                    <StyledText className='text-lg'>Buyer Pays:</StyledText>
+            <StyledView className='bg-gray mt-4 w-full h-px'/>
+
+
+            <StyledView className='flex pl-4 pr-4 mt-4 w-full'>
+              <StyledText className='text-xl font-bold text-black'>Pricing</StyledText>
+              <StyledView className='flex-row gap-x-4 mt-2 justify-between'>      
+                  <StyledPressable className={`${listingType==='auction' && 'bg-primary border-primary'} flex-1 border-2 rounded-2xl active:bg-gray`} onPress={() => setListingType('auction')}>
+                    <StyledText className={`${listingType==='auction' && 'text-white'} font-bold text-center p-2`}>Auction</StyledText>
+                  </StyledPressable>
+                  <StyledPressable className={`${listingType==='fixed' && 'bg-primary border-primary'} flex-1 border-2 rounded-2xl active:bg-gray`} onPress={() => setListingType('fixed')}>
+                    <StyledText className={`${listingType==='fixed' && 'text-white'} font-bold text-center p-2`}>Buy Now</StyledText>
+                  </StyledPressable>
+              </StyledView>
+
+                <>
+                  <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
+                    <StyledText className='text-lg'>Price:</StyledText>
                     <StyledView className='flex-row items-center justify-end'>
                       <StyledText className='font-bold text-xl'>$ </StyledText>
                       <StyledView className='flex-row justify-center items-center border-2 border-gray rounded-lg w-1/2 h-8'>
                         <StyledTextInput 
-                          className='text-primary text-center font-bold justify-center shadow-sm w-full' 
-                          placeholder='Cost'
+                          className='text-primary text-center font-bold shadow-sm h-8 w-full' 
+                          style={{fontSize:16}}
+                          placeholder='Price'
                           placeholderTextColor='gray'
-                          style={{fontSize: 16}}
-                          value={shippingCost} 
-                          onChangeText={(text) => setShippingCost(text)}
+                          value={price} 
+                          onChangeText={(text) => setPrice(text)}
                           keyboardType='numeric'
                         />
                       </StyledView>
                     </StyledView>
                   </StyledView>
-              </>
-            )}
-          </StyledView>
+
+                  {listingType==='auction' && (
+                    <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
+                      <StyledText className='text-lg'>Duration:</StyledText>
+                      <StyledView className='flex-row items-center border-2 border-gray rounded-xl'>
+                        <StyledTextInput 
+                          className='text-center w-12 font-bold shadow-sm text-primary'
+                          style={{fontSize: 16}}
+                          value={duration} 
+                          onChangeText={(text) => setDuration(text)} 
+                          keyboardType="numeric" 
+                        />
+                        <StyledText className='text-lg mr-2 text-gray'>Day(s)</StyledText>
+                      </StyledView>
+                    </StyledView>
+                  )}
+                  <StyledView className="flex-row gap-x-4 mt-2 justify-between">
+                    <StyledText className="text-lg">Allow Offers:</StyledText>
+                    <StyledPressable className={`${offerable?'bg-primary':'border-2 border-gray'} flex justify-center items-center text-xl text-center w-8 h-8 ml-2 font-bold rounded-full active:bg-gray`} onPress={() => {setOfferable(!offerable)}}>
+                      {offerable && (
+                        <StyledImage source={icons.check} className='w-6 h-6'/>
+                      )}
+                    </StyledPressable>
+                  </StyledView>
+                  <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                    <StyledText className={`${scheduled&&'font-bold'} text-lg`}>Schedule Start: </StyledText>
+                    <StyledPressable className={`${scheduled?'bg-primary':'border-2 border-gray'} flex justify-center items-center text-xl text-center w-8 h-8 ml-2 font-bold rounded-full active:bg-gray`} onPress={() => {setScheduled(!scheduled)}}>
+                      {scheduled && (
+                        <StyledImage source={icons.check} className='w-6 h-6'/>
+                      )}
+                    </StyledPressable>
+                  </StyledView>
+                  {scheduled && (
+                    <StyledView className='flex-row gap-x-4 mt-2 justify-between'>
+                      <StyledView className='flex-row items-center'>
+                        <StyledText className='text-lg'>Date:</StyledText>
+                        <DateTimePicker
+                          testID="dateTimePicker"
+                          value={date}
+                          mode="date"
+                          is24Hour={true}
+                          display="default"
+                          onChange={(event, selectedDate) => setDate(selectedDate || date)}
+                        />
+                      </StyledView>
+                      <StyledView className='flex-row items-center'>
+                        <StyledText className='text-lg'>Time:</StyledText>
+                        <DateTimePicker
+                          testID="dateTimePicker"
+                          value={time}
+                          mode="time"
+                          is24Hour={true}
+                          display="default"
+                          onChange={(event, selectedTime) => setTime(selectedTime || time)}
+                        />
+                      </StyledView>
+                    </StyledView>
+                  )}
+                  
+                </>
+            </StyledView>
+
+            <StyledView className='bg-gray mt-4 w-full h-px'/>
+            <StyledView className='flex pl-4 pr-4 mt-4 w-full'>
+              <StyledText className='text-xl font-bold text-black'>Shipping</StyledText>
+              <StyledView className='flex-row gap-x-4 mt-2 justify-between'>      
+                  <StyledPressable className={`${shippingType==='variable' && 'bg-primary border-primary'} flex-1 border-2 rounded-2xl active:bg-gray`} onPress={() => setShippingType('variable')}>
+                    <StyledText className={`${shippingType==='variable' && 'text-white'}  font-bold text-center p-2`}>Variable</StyledText>
+                  </StyledPressable>
+                  <StyledPressable className={`${shippingType==='fixed' && 'bg-primary border-primary'} flex-1 border-2 rounded-2xl active:bg-gray`} onPress={() => setShippingType('fixed')}>
+                    <StyledText className={`${shippingType==='fixed' && 'text-white'} font-bold text-center p-2`}>Fixed Rate</StyledText>
+                  </StyledPressable>
+              </StyledView>
+
+              {shippingType==='variable' && (
+                <>
+                  <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
+                    <StyledText className='text-lg'>Weight:</StyledText>
+                    <StyledView className='flex-row items-center border-2 border-gray rounded-xl'>
+                      <StyledTextInput 
+                        className='text-center w-12 font-bold shadow-sm text-primary'
+                        style={{fontSize: 16}}
+                        value={weight} 
+                        onChangeText={(text) => setWeight(text)} 
+                        keyboardType="numeric" 
+                      />
+                      <StyledText className='text-lg mr-2 text-gray'>Oz(s)</StyledText>
+                    </StyledView>
+                  </StyledView>
+                  <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
+                    <StyledText className='text-lg'>Shipping Service:</StyledText>
+                    <StyledPressable className='border-2 border-gray rounded-lg w-1/2 active:bg-gray h-8 justify-center' onPress={() => {setShippingModalVisible(true);}}>
+                      {shippingProfile==='' ? (
+                        <StyledText className='text-gray text-center font-bold'>Select Shipping</StyledText>
+                      ):(
+                        <StyledText className='pr-2 pl-2 text-lg text-primary text-center font-bold shadow-sm'>{shippingProfile}</StyledText>
+                      )}
+                    </StyledPressable>
+                  </StyledView>
+                </>
+              )}
+
+              {shippingType==='fixed' && (
+                <>
+                  <StyledText className='text-gray mt-1'>*Charge your buyer a flat shipping cost. If the amount is less than the shipping cost, you pay the difference. Choose this option to use your own shipping labels or offer your buyers discounted shipping.</StyledText>
+                  <StyledView className='flex-row gap-x-4 mt-2 justify-between items-center'>
+                      <StyledText className='text-lg'>Buyer Pays:</StyledText>
+                      <StyledView className='flex-row items-center justify-end'>
+                        <StyledText className='font-bold text-xl'>$ </StyledText>
+                        <StyledView className='flex-row justify-center items-center border-2 border-gray rounded-lg w-1/2 h-8'>
+                          <StyledTextInput 
+                            className='text-primary text-center font-bold justify-center shadow-sm w-full' 
+                            placeholder='Cost'
+                            placeholderTextColor='gray'
+                            style={{fontSize: 16}}
+                            value={shippingCost} 
+                            onChangeText={(text) => setShippingCost(text)}
+                            keyboardType='numeric'
+                          />
+                        </StyledView>
+                      </StyledView>
+                    </StyledView>
+                </>
+              )}
+            </StyledView>
 
 
-          <StyledView className='bg-gray mt-4 w-full h-px'/>
-          <StyledView className='flex pl-4 pr-4 mt-4 w-full items-center'>
-            <StyledPressable 
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut} 
-              disabled={uploading} 
-              className='flex overflow-hidden items-center w-full border-2 border-black bg-primary active:bg-primaryDark rounded-full'>
-              <Animated.View
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  backgroundColor: '#22FF22', // Green color
-                  width: animatedWidth, // Animate the width
-                }}
-              />
-              <StyledText className='text-xl font-bold text-white p-2'>Create Listing</StyledText>
-            </StyledPressable>
-          </StyledView>
-          <StyledView className='w-full h-24'/>
+            <StyledView className='bg-gray mt-4 w-full h-px'/>
+            <StyledView className='flex pl-4 pr-4 mt-4 w-full items-center'>
+              <StyledPressable 
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut} 
+                disabled={uploading} 
+                className='flex overflow-hidden items-center w-full border-2 border-black bg-primary active:bg-primaryDark rounded-full'>
+                <Animated.View
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    backgroundColor: '#22FF22', // Green color
+                    width: animatedWidth, // Animate the width
+                  }}
+                />
+                <StyledText className='text-xl font-bold text-white p-2'>Create Listing</StyledText>
+              </StyledPressable>
+            </StyledView>
+            <StyledView className='w-full h-24'/>
 
-          <GraderModal
-            visible={graderModalVisible}
-            onClose={() => {setGraderModalVisible(false);}}
-            onSelectGrader={(grader: string) => handleGraderSelect(grader)}
-          />
+            <GraderModal
+              visible={graderModalVisible}
+              onClose={() => {setGraderModalVisible(false);}}
+              onSelectGrader={(grader: string) => handleGraderSelect(grader)}
+            />
 
-          <GradeModal
-            visible={gradeModalVisible}
-            grader={grader}
-            onClose={() => {setGradeModalVisible(false);}}
-            onSelectGrade={(grade: string) => handleGradeSelect(grade)}
-          />
+            <GradeModal
+              visible={gradeModalVisible}
+              grader={grader}
+              onClose={() => {setGradeModalVisible(false);}}
+              onSelectGrade={(grade: string) => handleGradeSelect(grade)}
+            />
 
-          <QualityModal
-            visible={qualityModalVisible}
-            onClose={() => {setQualityModalVisible(false);}}
-            onSelectQuality={(quality: string) => handleQualitySelect(quality)}
-          />
+            <QualityModal
+              visible={qualityModalVisible}
+              onClose={() => {setQualityModalVisible(false);}}
+              onSelectQuality={(quality: string) => handleQualitySelect(quality)}
+            />
 
-          <CategoryModal 
-            visible={categoryModalVisible}
-            onClose={() => {setCategoryModalVisible(false);}}
-            onSelectCategory={(category: string, selectedGenre: string) => handleCategorySelect(category, selectedGenre)}
-          />
+            <CategoryModal 
+              visible={categoryModalVisible}
+              onClose={() => {setCategoryModalVisible(false);}}
+              onSelectCategory={(category: string, selectedGenre: string) => handleCategorySelect(category, selectedGenre)}
+            />
 
-          <BrandModal 
-            visible={brandModalVisible}
-            onClose={() => {setBrandModalVisible(false);}}
-            onSelectBrand={(brand: string) => handleBrandSelect(brand)}
-          />
+            <BrandModal 
+              visible={brandModalVisible}
+              onClose={() => {setBrandModalVisible(false);}}
+              onSelectBrand={(brand: string) => handleBrandSelect(brand)}
+            />
 
-          <FeaturesModal
-            visible={featuresModalVisible}
-            onClose={() => {setFeaturesModalVisible(false);}}
-            onSelectFeatures={(features:string[]) => handleFeaturesSelect(features)}
-          />
+            <FeaturesModal
+              visible={featuresModalVisible}
+              onClose={() => {setFeaturesModalVisible(false);}}
+              onSelectFeatures={(features:string[]) => handleFeaturesSelect(features)}
+              selectedFeatures={features}
+            />
 
-          <ShippingModal
-            visible={shippingModalVisible}
-            onClose={() => {setShippingModalVisible(false);}} 
-            onSelectShipping={(shipping:string) => handleShippingSelect(shipping)}
-          />
+            <ShippingModal
+              visible={shippingModalVisible}
+              onClose={() => {setShippingModalVisible(false);}} 
+              onSelectShipping={(shipping:string) => handleShippingSelect(shipping)}
+            />
 
-          <UploadingModal
-            visible={uploading}
-            progress={uploadProgress}
-            listingUrl={listingUrl}
-            onClose={() => {setUploading(false);}}
-          />
+            <UploadingModal
+              visible={uploading}
+              progress={uploadProgress}
+              listingUrl={listingUrl}
+              onClose={() => {setUploading(false);}}
+            />
 
-        </StyledScrollView>
-      </StyledView>
+          </StyledScrollView>
+        </StyledView>
+      </KeyboardAvoidingView>
     </StyledView>
-
   );
 };
 

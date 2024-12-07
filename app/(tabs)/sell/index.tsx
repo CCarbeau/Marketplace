@@ -168,16 +168,16 @@ const sell = () => {
         {profile?.seller ? (
           <StyledPressable 
             onPress={() => {router.push('/(tabs)/sell/createListing')}}
-            className='border bg-primary active:bg-primaryDark rounded-3xl w-5/6 items-center p-2 shadow-sm shadow-darkGray '
+            className='border bg-primary active:bg-primaryDark rounded-3xl w-5/6 items-center p-2 shadow-sm shadow-darkGray'
           >
             <StyledText className='font-bold text-white text-xl'>Create Listing</StyledText>
           </StyledPressable>
         ):(
         <StyledPressable
           onPress={() => {router.push('/(auth)/sellerSignUp')}}
-          className='border bg-primary active:bg-primaryDark rounded-3xl w-5/6 items-center p-2'
+          className='border bg-primary active:bg-primaryDark rounded-3xl w-5/6 items-center p-2 shadow-sm shadow-darkGray'
         >
-          <StyledText>Become a Seller</StyledText>
+          <StyledText className='font-bold text-white text-xl'>Become a Seller</StyledText>
         </StyledPressable>
         )}  
     </StyledView>
